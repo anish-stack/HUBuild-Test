@@ -200,12 +200,12 @@ const AddCustomChat = () => {
         }
 
         // Validate payment fields if payment status is paid
-        if (formData.PaymentStatus === 'paid') {
-            if (!formData.amount || !formData.service || !formData.time || !formData.razorpayOrderId || !formData.transactionId) {
-                toast.error("Please fill all payment related fields when payment status is paid");
-                return;
-            }
-        }
+        // if (formData.PaymentStatus === 'paid') {
+        //     if (!formData.amount || !formData.service || !formData.razorpayOrderId || !formData.transactionId) {
+        //         toast.error("Please fill all payment related fields when payment status is paid");
+        //         return;
+        //     }
+        // }
 
         setLoading(true);
         try {
@@ -249,7 +249,9 @@ const AddCustomChat = () => {
                         <CCol md={6}>
                             <h6 className="mb-0">
                                 <CIcon icon={cilUser} className="me-2" />
-                                {category.charAt(0).toUpperCase() + category.slice(0, -1)} Providers
+                                {category === 'architects' ? 'Architect' :
+                                    category === 'interiors' ? 'Interior' :
+                                        category === 'vastu' ? 'Vastu' : category}
                                 <span className="badge bg-info ms-2">{totalItems}</span>
                             </h6>
                         </CCol>
@@ -431,37 +433,37 @@ const AddCustomChat = () => {
                                     <>
                                         <CRow className="mt-3">
                                             <CCol md={12}>
-                                                <CFormLabel htmlFor="amount">Amount *</CFormLabel>
+                                                <CFormLabel htmlFor="amount">Amount </CFormLabel>
                                                 <CFormInput
                                                     id="amount"
                                                     type="number"
                                                     placeholder="Enter amount"
                                                     value={formData.amount}
                                                     onChange={(e) => handleInputChange('amount', e.target.value)}
-                                                    required
+                                                // required
                                                 />
                                             </CCol>
 
                                         </CRow>
                                         <CRow className="mt-3">
                                             <CCol md={6}>
-                                                <CFormLabel htmlFor="razorpayOrderId">Razorpay Order ID *</CFormLabel>
+                                                <CFormLabel htmlFor="razorpayOrderId">Razorpay Order ID</CFormLabel>
                                                 <CFormInput
                                                     id="razorpayOrderId"
                                                     placeholder="Enter Razorpay order ID"
                                                     value={formData.razorpayOrderId}
                                                     onChange={(e) => handleInputChange('razorpayOrderId', e.target.value)}
-                                                    required
+                                                // required
                                                 />
                                             </CCol>
                                             <CCol md={6}>
-                                                <CFormLabel htmlFor="transactionId">Transaction ID *</CFormLabel>
+                                                <CFormLabel htmlFor="transactionId">Transaction ID</CFormLabel>
                                                 <CFormInput
                                                     id="transactionId"
                                                     placeholder="Enter transaction ID"
                                                     value={formData.transactionId}
                                                     onChange={(e) => handleInputChange('transactionId', e.target.value)}
-                                                    required
+                                                // required
                                                 />
                                             </CCol>
                                         </CRow>

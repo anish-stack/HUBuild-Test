@@ -28,7 +28,7 @@ exports.createChatWithNew = async (req, res) => {
         const room = `${userId}_${providerId}`
         const check = await ChatAndPayment.findOne({ room: room })
         if (check) {
-            if(check.userChatTempDeleted === true && check.providerChatTempDeleted === true){
+            if (check.userChatTempDeleted === true && check.providerChatTempDeleted === true) {
                 check.userChatTempDeleted = false;
                 check.providerChatTempDeleted = false;
                 await check.save();
@@ -54,7 +54,7 @@ exports.createChatWithNew = async (req, res) => {
             })
         }
 
-        if(provider?.isBanned === true){
+        if (provider?.isBanned === true) {
             return res.status(400).json({
                 success: false,
                 message: 'Provider is blocked',
@@ -713,75 +713,109 @@ exports.getGroupChatById = async (req, res) => {
 
 
 exports.updateManualChatRoom = async (req, res) => {
-  try {
-    const { chatRoomId } = req.params;
-    const {
-      groupName,
-      providerIds,
-      userId,
-      amount,
-      service,
-      razorpayOrderId,
-      transactionId,
-      PaymentStatus
-    } = req.body;
+    try {
+        const { chatRoomId } = req.params;
+        const {
+            groupName,
+            providerIds,
+            userId,
+            amount,
+            service,
+            razorpayOrderId,
+            transactionId,
+            PaymentStatus
+        } = req.body;
 
-    // 1. Find existing chat room
-    const chatRoom = await ChatAndPayment.findById(chatRoomId);
-    if (!chatRoom) {
-      return res.status(404).json({ message: "Chat room not found." });
+        // 1. Find existing chat room
+        const chatRoom = await ChatAndPayment.findById(chatRoomId);
+        if (!chatRoom) {
+            return res.status(404).json({ message: "Chat room not found." });
+        }
+
+        // 2. Remove chatRoomId from previously linked providers
+        if (Array.isArray(chatRoom.providerIds) && chatRoom.providerIds.length > 0) {
+            await Provider.updateMany(
+                { _id: { $in: chatRoom.providerIds } },
+                { $pull: { chatRoomIds: chatRoom._id } }
+            );
+        }
+
+        // 3. Add chatRoomId to new provider list (if provided)
+        if (Array.isArray(providerIds) && providerIds.length > 0) {
+            await Provider.updateMany(
+                { _id: { $in: providerIds } },
+                { $addToSet: { chatRoomIds: chatRoom._id } }
+            );
+            chatRoom.providerIds = providerIds;
+        }
+
+        // 4. Handle user change and update references
+        if (userId && userId.toString() !== chatRoom.userId.toString()) {
+            await User.findByIdAndUpdate(chatRoom.userId, {
+                $pull: { chatRoomIds: chatRoom._id }
+            });
+
+            await User.findByIdAndUpdate(userId, {
+                $addToSet: { chatRoomIds: chatRoom._id }
+            });
+
+            chatRoom.userId = userId;
+        }
+
+        // 5. Update other fields if present
+        if (groupName) chatRoom.groupName = groupName;
+        if (amount) chatRoom.amount = amount;
+        if (service) chatRoom.service = service;
+        if (razorpayOrderId) chatRoom.razorpayOrderId = razorpayOrderId;
+        if (transactionId) chatRoom.transactionId = transactionId;
+        if (PaymentStatus) chatRoom.PaymentStatus = PaymentStatus;
+
+        // 6. Save updated document
+        const updatedChatRoom = await chatRoom.save();
+
+        return res.status(200).json({
+            message: "Chat room updated successfully.",
+            data: updatedChatRoom
+        });
+    } catch (error) {
+        console.error("Error updating chat room:", error);
+        return res.status(500).json({
+            message: "An error occurred while updating the chat room.",
+            error: error.message
+        });
     }
-
-    // 2. Remove chatRoomId from previously linked providers
-    if (Array.isArray(chatRoom.providerIds) && chatRoom.providerIds.length > 0) {
-      await Provider.updateMany(
-        { _id: { $in: chatRoom.providerIds } },
-        { $pull: { chatRoomIds: chatRoom._id } }
-      );
-    }
-
-    // 3. Add chatRoomId to new provider list (if provided)
-    if (Array.isArray(providerIds) && providerIds.length > 0) {
-      await Provider.updateMany(
-        { _id: { $in: providerIds } },
-        { $addToSet: { chatRoomIds: chatRoom._id } }
-      );
-      chatRoom.providerIds = providerIds;
-    }
-
-    // 4. Handle user change and update references
-    if (userId && userId.toString() !== chatRoom.userId.toString()) {
-      await User.findByIdAndUpdate(chatRoom.userId, {
-        $pull: { chatRoomIds: chatRoom._id }
-      });
-
-      await User.findByIdAndUpdate(userId, {
-        $addToSet: { chatRoomIds: chatRoom._id }
-      });
-
-      chatRoom.userId = userId;
-    }
-
-    // 5. Update other fields if present
-    if (groupName) chatRoom.groupName = groupName;
-    if (amount) chatRoom.amount = amount;
-    if (service) chatRoom.service = service;
-    if (razorpayOrderId) chatRoom.razorpayOrderId = razorpayOrderId;
-    if (transactionId) chatRoom.transactionId = transactionId;
-    if (PaymentStatus) chatRoom.PaymentStatus = PaymentStatus;
-
-    // 6. Save updated document
-    const updatedChatRoom = await chatRoom.save();
-
-    return res.status(200).json({
-      message: "Chat room updated successfully.",
-      data: updatedChatRoom
-    });
-  } catch (error) {
-    console.error("Error updating chat room:", error);
-    return res.status(500).json({
-      message: "An error occurred while updating the chat room.",
-      error: error.message
-    });
-  }
 };
+
+exports.updateGroupName = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { groupName } = req.body;
+        if (!groupName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Group name is required',
+            });
+        }
+        const chat = await ChatAndPayment.findById(id);
+        if (!chat) {
+            return res.status(404).json({
+                success: false,
+                message: 'Chat not found',
+            });
+        }
+        chat.groupName = groupName;
+        const updatedChat = await chat.save();
+        return res.status(200).json({
+            success: true,
+            message: 'Group name updated successfully',
+            data: updatedChat
+        });
+    } catch (error) {
+        console.error("Error updating group name:", error);
+        return res.status(500).json({
+            success: false,
+            message: "An error occurred while updating the group name.",
+            error: error.message
+        });
+    }
+}
