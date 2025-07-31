@@ -4,7 +4,7 @@ import './Chat.css';
 import { MdAttachment } from "react-icons/md";
 import ScrollToBottom from 'react-scroll-to-bottom';
 
-const ENDPOINT = 'https://helpapi.nypers.in/';
+const ENDPOINT = 'http://localhost:5654/';
 
 const Chat = () => {
   const [isPopupOpen, setIsPopupOpen] = useState(false);

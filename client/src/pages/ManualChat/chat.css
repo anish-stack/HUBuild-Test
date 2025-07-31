@@ -2065,3 +2065,401 @@
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Existing chat styles remain the same, adding new compact annotation styles */
+
+/* Compact Annotation Controls */
+.chat-screen-compact-controls {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border: 1px solid #e9ecef;
+}
+
+.tools-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tool-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-group label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #495057;
+  margin: 0;
+}
+
+.tool-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.tool-btn {
+  width: 36px;
+  height: 36px;
+  border: 2px solid #dee2e6;
+  background: white;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+}
+
+.tool-btn:hover {
+  border-color: #007bff;
+  background: #f8f9ff;
+}
+
+.tool-btn.active {
+  border-color: #007bff;
+  background: #007bff;
+  color: white;
+}
+
+.action-group {
+  display: flex;
+  gap: 4px;
+}
+
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dee2e6;
+  background: white;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 16px;
+}
+
+.action-btn:hover {
+  background: #f8f9fa;
+}
+
+.undo-btn:hover {
+  background: #fff3cd;
+  border-color: #ffc107;
+}
+
+.clear-btn:hover {
+  background: #f8d7da;
+  border-color: #dc3545;
+}
+
+.zoom-btn:hover {
+  background: #d1ecf1;
+  border-color: #17a2b8;
+}
+
+/* Compact Color Picker */
+.compact-brush-controls {
+  background: white;
+  border-radius: 6px;
+  padding: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.color-size-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.color-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-section label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #495057;
+  margin: 0;
+}
+
+.color-options {
+  display: flex;
+  gap: 3px;
+}
+
+.color-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.color-dot:hover {
+  transform: scale(1.1);
+}
+
+.color-dot.active {
+  border-color: #007bff;
+  transform: scale(1.1);
+}
+
+.size-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.size-section label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #495057;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.size-slider {
+  width: 80px;
+  height: 4px;
+  background: #e9ecef;
+  border-radius: 2px;
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #007bff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Text Controls Compact */
+.text-controls-compact {
+  background: white;
+  border-radius: 6px;
+  padding: 8px;
+  border: 1px solid #dee2e6;
+  margin-top: 8px;
+}
+
+.text-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.text-size,
+.text-color,
+.text-font {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.text-size label,
+.text-color label,
+.text-font label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #495057;
+  margin: 0;
+}
+
+.text-size input[type="range"] {
+  width: 60px;
+}
+
+.text-size span {
+  font-size: 11px;
+  color: #6c757d;
+  min-width: 30px;
+}
+
+.text-color input[type="color"] {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.text-font select {
+  font-size: 12px;
+  padding: 2px 4px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+}
+
+/* Zoom Controls */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.zoom-controls button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #dee2e6;
+  background: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.zoom-controls button:hover {
+  background: #f8f9fa;
+  border-color: #007bff;
+}
+
+.zoom-hint {
+  color: #6c757d;
+  font-size: 11px;
+  margin-left: auto;
+}
+
+/* Canvas wrapper improvements */
+.chat-screen-canvas-wrapper {
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  background: #f8f9fa;
+  position: relative;
+  max-height: 70vh;
+  overflow: hidden;
+}
+
+.chat-screen-canvas-container {
+  position: relative;
+  display: inline-block;
+}
+
+/* Text element controls */
+.text-element-controls {
+  position: absolute;
+  top: -30px;
+  right: -10px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.text-element:hover .text-element-controls,
+.text-element.selected .text-element-controls {
+  opacity: 1;
+}
+
+.text-control-btn {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #dee2e6;
+  background: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.edit-btn:hover {
+  background: #fff3cd;
+  border-color: #ffc107;
+}
+
+.delete-btn:hover {
+  background: #f8d7da;
+  border-color: #dc3545;
+}
+
+/* Text editing modal */
+.chat-screen-text-edit-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.chat-screen-text-edit-modal {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 300px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .tools-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .color-size-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .text-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .zoom-controls {
+    flex-wrap: wrap;
+  }
+
+  .zoom-hint {
+    margin-left: 0;
+    margin-top: 4px;
+  }
+}

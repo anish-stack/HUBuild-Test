@@ -17,7 +17,7 @@ function StatusPage() {
     const handleFetchProvider = async () => {
         try {
             const { data } = await axios.get(
-                `https://helpapi.nypers.in/api/v1/get-single-provider/${providerId}`
+                `http://localhost:5654/api/v1/get-single-provider/${providerId}`
             );
             const allData = data.data;
             setStatuses({
@@ -42,7 +42,7 @@ function StatusPage() {
 
         try {
             const response = await axios.put(
-                `https://helpapi.nypers.in/api/v1/update-available-status/${providerId}`,
+                `http://localhost:5654/api/v1/update-available-status/${providerId}`,
                 { [statusType]: updatedStatus }
             );
             if (response.data.success) {

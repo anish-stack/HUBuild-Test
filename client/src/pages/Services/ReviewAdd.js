@@ -32,7 +32,7 @@ const ReviewAdd = ({ user_id, provider_id }) => {
         
         setLoading(true);
         try {
-            await axios.post('https://helpapi.nypers.in/api/v1/create-rating', formData);
+            await axios.post('http://localhost:5654/api/v1/create-rating', formData);
             toast.success("Review added successfully!");
             setFormData({ provider_id, rating: 0, review: '', user_id });
             window.location.reload();

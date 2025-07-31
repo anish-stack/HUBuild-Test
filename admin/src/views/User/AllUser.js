@@ -32,7 +32,7 @@ function AllUser() {
   const handleFetchUsers = async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get('https://helpapi.nypers.in/api/v1/users', {
+      const { data } = await axios.get('http://localhost:5654/api/v1/users', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -53,7 +53,7 @@ function AllUser() {
   const handleUpdateActive = async (id, currentStatus) => {
     setLoading(true);
     try {
-      const res = await axios.put(`https://helpapi.nypers.in/api/v1/user-ban/${id}`, {
+      const res = await axios.put(`http://localhost:5654/api/v1/user-ban/${id}`, {
         isBanned: !currentStatus,
       });
       handleFetchUsers();
@@ -89,7 +89,7 @@ function AllUser() {
   const handleDeleteUser = async (id) => {
     setLoading(true);
     try {
-      await axios.delete(`https://helpapi.nypers.in/api/v1/user-delete/${id}`);
+      await axios.delete(`http://localhost:5654/api/v1/user-delete/${id}`);
       handleFetchUsers();
       toast.success('User deleted successfully!');
     } catch (error) {

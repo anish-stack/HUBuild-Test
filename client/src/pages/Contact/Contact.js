@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import BreadCrumbs from '../../components/BreadCrumbs';
 import axios from 'axios';
 
-const url = `https://helpapi.nypers.in/api/v1/create-contact`;
+const url = `http://localhost:5654/api/v1/create-contact`;
 
 const Contact = () => {
     const [formData, setFormData] = useState({

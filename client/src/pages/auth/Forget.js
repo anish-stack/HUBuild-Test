@@ -72,7 +72,7 @@ function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await axios.post('https://helpapi.nypers.in/api/v1/forgot-password', {
+      const response = await axios.post('http://localhost:5654/api/v1/forgot-password', {
         mobileNumber,
       });
 
@@ -116,7 +116,7 @@ function ForgotPassword() {
 
     setLoading(true);
     try {
-      const response = await axios.post('https://helpapi.nypers.in/api/v1/forgot-password', {
+      const response = await axios.post('http://localhost:5654/api/v1/forgot-password', {
         mobileNumber,
       });
 
@@ -172,7 +172,7 @@ function ForgotPassword() {
     setLoading(true);
 
     try {
-      const response = await axios.post('https://helpapi.nypers.in/api/v1/Changepassword', {
+      const response = await axios.post('http://localhost:5654/api/v1/Changepassword', {
         mobileNumber,
         otp,
         password,

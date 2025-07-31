@@ -2,7 +2,24 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react"
 import "./chat.css"
 import {
-  MdAttachment, MdSend, MdArrowBack, MdSearch, MdPhone, MdExpandMore, MdUndo, MdClear, MdBrush, MdPinEnd, MdFormatSize, MdColorize, MdReply, MdClose, MdRedo, MdRotateRight, MdFilter, MdFormatBold, MdFormatItalic, MdFormatUnderlined, MdFormatAlignCenter, MdFormatAlignLeft, MdFormatAlignRight, MdRectangle, MdCircle, MdArrowForward, MdEdit, MdDelete, MdContentCopy, MdLayers, MdPalette
+  MdAttachment,
+  MdSend,
+  MdArrowBack,
+  MdSearch,
+  MdPhone,
+  MdExpandMore,
+  MdUndo,
+  MdClear,
+  MdBrush,
+  MdPinEnd,
+  MdReply,
+  MdClose,
+  MdRectangle,
+  MdCircle,
+  MdArrowForward,
+  MdZoomIn,
+  MdZoomOut,
+  MdCenterFocusWeak,
 } from "react-icons/md"
 import ScrollToBottom from "react-scroll-to-bottom"
 import axios from "axios"
@@ -14,9 +31,10 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { Modal, Dropdown } from "react-bootstrap"
 import "bootstrap/dist/css/bootstrap.min.css"
 import CanvasDraw from "react-canvas-draw"
-import { Pencil, Mic } from 'lucide-react';
+import { Mic, StopCircle, Send, X } from "lucide-react" // Import new icons for recording
+import { Pencil } from "lucide-react"
 
-const ENDPOINT = "https://helpapi.nypers.in/"
+const ENDPOINT = "http://localhost:5654/"
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
 const ManualChat = () => {
@@ -57,6 +75,7 @@ const ManualChat = () => {
   const [brushColor, setBrushColor] = useState("#ff0000")
   const [brushRadius, setBrushRadius] = useState(2)
   const [isAnnotating, setIsAnnotating] = useState(false)
+  const [isErasing, setIsErasing] = useState(false)
   const canvasRef = useRef()
   // Enhanced Text Annotation States
   const [textElements, setTextElements] = useState([])
@@ -82,38 +101,40 @@ const ManualChat = () => {
   const [isEditingText, setIsEditingText] = useState(false)
   const [editingTextId, setEditingTextId] = useState(null)
   const [editingTextValue, setEditingTextValue] = useState("")
-
   const [groupName, setGroupName] = useState("")
   const [isEditingGroupName, setIsEditingGroupName] = useState(false)
-
-  // Enhanced Image Editor States
-  const [imageFilters, setImageFilters] = useState({
-    brightness: 100,
-    contrast: 100,
-    saturation: 100,
-    blur: 0,
-    sepia: 0,
-    grayscale: 0,
-  })
-  const [imageTransform, setImageTransform] = useState({
-    rotation: 0,
-    scaleX: 1,
-    scaleY: 1,
-    flipX: false,
-    flipY: false,
-  })
-  const [drawingTool, setDrawingTool] = useState("brush") // brush, rectangle, circle, arrow, line
-  const [showImageEditor, setShowImageEditor] = useState(false)
-  const [cropMode, setCropMode] = useState(false)
-  const [cropArea, setCropArea] = useState(null)
+  // Enhanced Drawing Tool States
+  const [drawingTool, setDrawingTool] = useState("brush") // brush, rectangle, circle, arrow, line, eraser
+  const [shapes, setShapes] = useState([])
+  const [isDrawingShape, setIsDrawingShape] = useState(false)
+  const [shapeStart, setShapeStart] = useState(null)
+  const [currentShape, setCurrentShape] = useState(null)
+  // Enhanced Eraser States
+  const [eraserRadius, setEraserRadius] = useState(10)
+  const [isErasingShape, setIsErasingShape] = useState(false)
+  // Zoom functionality states
+  const [zoomLevel, setZoomLevel] = useState(1)
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
+  const [isPanning, setIsPanning] = useState(false)
+  const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 })
   // Add participants mapping for better sender resolution
   const [participantsMap, setParticipantsMap] = useState(new Map())
   const navigate = useNavigate()
   const location = useLocation()
-  const textCanvasRef = useRef(null)
-  const modalRef = useRef(null)
-  const imageCanvasRef = useRef(null)
-  const editTextInputRef = useRef(null)
+  const textCanvasRef = useRef()
+  const modalRef = useRef()
+  const editTextInputRef = useRef()
+  const containerRef = useRef()
+  const shapeCanvasRef = useRef()
+  const eraserCanvasRef = useRef()
+
+  // Voice note recording states
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState(null)
+  const [audioChunks, setAudioChunks] = useState([])
+  const mediaRecorderRef = useRef(null)
+  const [recordingDuration, setRecordingDuration] = useState(0)
+  const recordingIntervalRef = useRef(null)
 
   // User data from session storage
   const userData = useMemo(() => {
@@ -121,7 +142,6 @@ const ManualChat = () => {
     return data ? JSON.parse(data) : null
   }, [])
   const socket = useSocket()
-
   // Enhanced function to build participants map
   const buildParticipantsMap = useCallback(
     (chatData) => {
@@ -157,7 +177,6 @@ const ManualChat = () => {
     },
     [userData],
   )
-
   // Enhanced getSenderInfo function
   const getSenderInfo = useCallback(
     (senderId) => {
@@ -201,7 +220,6 @@ const ManualChat = () => {
     },
     [participantsMap, userData, selectedChat, messages],
   )
-
   // Enhanced Reply functionality functions
   const handleReplyClick = useCallback(
     (message, messageIndex) => {
@@ -217,18 +235,15 @@ const ManualChat = () => {
     },
     [getSenderInfo],
   )
-
   const cancelReply = useCallback(() => {
     setReplyingTo(null)
   }, [])
-
   const toggleReplyOptions = useCallback((messageIndex) => {
     setShowReplyOptions((prev) => ({
       ...prev,
       [messageIndex]: !prev[messageIndex],
     }))
   }, [])
-
   // Enhanced Text Management Functions
   const addTextToHistory = useCallback(
     (elements) => {
@@ -239,9 +254,7 @@ const ManualChat = () => {
     },
     [textHistory, historyIndex],
   )
-
   const generateTextId = () => `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
   const addTextElement = useCallback(
     (x, y, text) => {
       if (!text.trim()) return
@@ -269,18 +282,16 @@ const ManualChat = () => {
       setTextPosition(null)
       setIsAddingText(false)
     },
-    [textElements, textSettings, addTextToHistory],
+    [textElements, textSettings, addTextToHistory, setTextInput, setTextPosition, setIsAddingText],
   )
-
   const updateTextElement = useCallback(
     (id, updates) => {
       const newElements = textElements.map((el) => (el.id === id ? { ...el, ...updates } : el))
       setTextElements(newElements)
       addTextToHistory(newElements)
     },
-    [textElements, addTextToHistory],
+    [textElements, addTextToHistory, setTextElements],
   )
-
   const deleteTextElement = useCallback(
     (id) => {
       const newElements = textElements.filter((el) => el.id !== id)
@@ -288,9 +299,8 @@ const ManualChat = () => {
       addTextToHistory(newElements)
       setSelectedTextId(null)
     },
-    [textElements, addTextToHistory],
+    [textElements, addTextToHistory, setTextElements, setSelectedTextId],
   )
-
   const duplicateTextElement = useCallback(
     (id) => {
       const element = textElements.find((el) => el.id === id)
@@ -306,9 +316,8 @@ const ManualChat = () => {
       setTextElements(newElements)
       addTextToHistory(newElements)
     },
-    [textElements, addTextToHistory],
+    [textElements, addTextToHistory, setTextElements],
   )
-
   const undoTextAction = useCallback(() => {
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1)
@@ -317,36 +326,329 @@ const ManualChat = () => {
       setHistoryIndex(-1)
       setTextElements([])
     }
-  }, [historyIndex, textHistory])
-
+  }, [historyIndex, textHistory, setHistoryIndex, setTextElements])
   const redoTextAction = useCallback(() => {
     if (historyIndex < textHistory.length - 1) {
       setHistoryIndex(historyIndex + 1)
       setTextElements([...textHistory[historyIndex + 1]])
     }
-  }, [historyIndex, textHistory])
-
-  // Enhanced Canvas Click Handler
-  const handleCanvasClick = useCallback(
+  }, [historyIndex, textHistory, setHistoryIndex, setTextElements])
+  // Enhanced Eraser Functions
+  const checkShapeCollision = useCallback(
+    (x, y, radius) => {
+      return shapes.filter((shape) => {
+        switch (shape.type) {
+          case "rectangle":
+            const rectLeft = Math.min(shape.startX, shape.endX)
+            const rectRight = Math.max(shape.startX, shape.endX)
+            const rectTop = Math.min(shape.startY, shape.endY)
+            const rectBottom = Math.max(shape.startY, shape.endY)
+            return (
+              x + radius >= rectLeft && x - radius <= rectRight && y + radius >= rectTop && y - radius <= rectBottom
+            )
+          case "circle":
+            const centerX = shape.startX
+            const centerY = shape.startY
+            const shapeRadius = Math.sqrt(
+              Math.pow(shape.endX - shape.startX, 2) + Math.pow(shape.endY - shape.startY, 2),
+            )
+            const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2))
+            return distance <= shapeRadius + radius
+          case "line":
+          case "arrow":
+            // Distance from point to line segment
+            const A = x - shape.startX
+            const B = y - shape.startY
+            const C = shape.endX - shape.startX
+            const D = shape.endY - shape.startY
+            const dot = A * C + B * D
+            const lenSq = C * C + D * D
+            let param = -1
+            if (lenSq !== 0) param = dot / lenSq
+            let xx, yy
+            if (param < 0) {
+              xx = shape.startX
+              yy = shape.startY
+            } else if (param > 1) {
+              xx = shape.endX
+              yy = shape.endY
+            } else {
+              xx = shape.startX + param * C
+              yy = shape.startY + param * D
+            }
+            const dx = x - xx
+            const dy = y - yy
+            const distanceToLine = Math.sqrt(dx * dx + dy * dy)
+            return distanceToLine <= radius + shape.radius
+          default:
+            return false
+        }
+      })
+    },
+    [shapes],
+  )
+  const handleEraserMove = useCallback(
     (e) => {
-      if (!isAddingText) return
-      const canvas = e.currentTarget
+      if (!isErasing || !isErasingShape) return
+      const canvas = eraserCanvasRef.current
+      if (!canvas) return
       const rect = canvas.getBoundingClientRect()
       const scaleX = canvas.width / rect.width
       const scaleY = canvas.height / rect.height
       const x = (e.clientX - rect.left) * scaleX
       const y = (e.clientY - rect.top) * scaleY
-      setTextPosition({ x, y })
-      e.stopPropagation() // Stop propagation to prevent wrapper click from unselecting
+      // Check for shape collisions and remove them
+      const collidingShapes = checkShapeCollision(x, y, eraserRadius)
+      if (collidingShapes.length > 0) {
+        const shapesToRemove = collidingShapes.map((shape) => shapes.indexOf(shape))
+        const newShapes = shapes.filter((_, index) => !shapesToRemove.includes(index))
+        setShapes(newShapes)
+      }
     },
-    [isAddingText],
+    [isErasing, isErasingShape, eraserRadius, checkShapeCollision, shapes, setShapes],
   )
-
+  const handleEraserStart = useCallback(
+    (e) => {
+      if (!isErasing) return
+      setIsErasingShape(true)
+      handleEraserMove(e)
+    },
+    [isErasing, handleEraserMove, setIsErasingShape],
+  )
+  const handleEraserEnd = useCallback(() => {
+    setIsErasingShape(false)
+  }, [setIsErasingShape])
+  // Zoom functionality
+  const handleZoom = useCallback(
+    (delta, mouseX, mouseY) => {
+      const zoomFactor = delta > 0 ? 1.1 : 0.9
+      const newZoom = Math.min(Math.max(zoomLevel * zoomFactor, 0.5), 3)
+      if (newZoom !== zoomLevel) {
+        const container = containerRef.current
+        if (container) {
+          const rect = container.getBoundingClientRect()
+          const x = mouseX - rect.left
+          const y = mouseY - rect.top
+          const newPanOffset = {
+            x: panOffset.x - x * (newZoom - zoomLevel),
+            y: panOffset.y - y * (newZoom - zoomLevel),
+          }
+          setZoomLevel(newZoom)
+          setPanOffset(newPanOffset)
+        }
+      }
+    },
+    [zoomLevel, panOffset, setZoomLevel, setPanOffset],
+  )
+  const handleWheel = useCallback(
+    (e) => {
+      e.preventDefault()
+      handleZoom(-e.deltaY, e.clientX, e.clientY)
+    },
+    [handleZoom],
+  )
+  const resetZoom = useCallback(() => {
+    setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
+  }, [setZoomLevel, setPanOffset])
+  // Pan functionality
+  const handleMouseDown = useCallback(
+    (e) => {
+      if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+        // Middle mouse or Ctrl+Left click
+        setIsPanning(true)
+        setLastPanPoint({ x: e.clientX, y: e.clientY })
+        e.preventDefault()
+      }
+    },
+    [setIsPanning, setLastPanPoint],
+  )
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (isPanning) {
+        const deltaX = e.clientX - lastPanPoint.x
+        const deltaY = e.clientY - lastPanPoint.y
+        setPanOffset((prev) => ({
+          x: prev.x + deltaX,
+          y: prev.y + deltaY,
+        }))
+        setLastPanPoint({ x: e.clientX, y: e.clientY })
+      }
+    },
+    [isPanning, lastPanPoint, setPanOffset, setLastPanPoint],
+  )
+  const handleMouseUp = useCallback(() => {
+    setIsPanning(false)
+  }, [setIsPanning])
+  // Shape drawing functions
+  const drawShape = useCallback((ctx, shape) => {
+    ctx.strokeStyle = shape.color
+    ctx.lineWidth = shape.radius
+    ctx.lineCap = "round"
+    ctx.lineJoin = "round"
+    switch (shape.type) {
+      case "rectangle":
+        ctx.strokeRect(shape.startX, shape.startY, shape.endX - shape.startX, shape.endY - shape.startY)
+        break
+      case "circle":
+        const radius = Math.sqrt(Math.pow(shape.endX - shape.startX, 2) + Math.pow(shape.endY - shape.startY, 2))
+        ctx.beginPath()
+        ctx.arc(shape.startX, shape.startY, radius, 0, 2 * Math.PI)
+        ctx.stroke()
+        break
+      case "arrow":
+        const headlen = 10
+        const dx = shape.endX - shape.startX
+        const dy = shape.endY - shape.startY
+        const angle = Math.atan2(dy, dx)
+        ctx.beginPath()
+        ctx.moveTo(shape.startX, shape.startY)
+        ctx.lineTo(shape.endX, shape.endY)
+        ctx.lineTo(
+          shape.endX - headlen * Math.cos(angle - Math.PI / 6),
+          shape.endY - headlen * Math.sin(angle - Math.PI / 6),
+        )
+        ctx.moveTo(shape.endX, shape.endY)
+        ctx.lineTo(
+          shape.endX - headlen * Math.cos(angle + Math.PI / 6),
+          shape.endY - headlen * Math.sin(angle + Math.PI / 6),
+        )
+        ctx.stroke()
+        break
+      case "line":
+        ctx.beginPath()
+        ctx.moveTo(shape.startX, shape.startY)
+        ctx.lineTo(shape.endX, shape.endY)
+        ctx.stroke()
+        break
+    }
+  }, [])
+  const renderShapes = useCallback(() => {
+    const canvas = shapeCanvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext("2d")
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    shapes.forEach((shape) => {
+      drawShape(ctx, shape)
+    })
+    if (currentShape) {
+      drawShape(ctx, currentShape)
+    }
+  }, [shapes, currentShape, drawShape])
+  const renderEraserCursor = useCallback(() => {
+    const canvas = eraserCanvasRef.current
+    if (!canvas || !isErasing) return
+    const ctx = canvas.getContext("2d")
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+  }, [isErasing])
+  useEffect(() => {
+    renderShapes()
+  }, [renderShapes])
+  useEffect(() => {
+    renderEraserCursor()
+  }, [renderEraserCursor])
+  // Enhanced Canvas Click Handler
+  const handleCanvasClick = useCallback(
+    (e) => {
+      if (isAddingText) {
+        const canvas = e.currentTarget
+        const rect = canvas.getBoundingClientRect()
+        const scaleX = canvas.width / rect.width
+        const scaleY = canvas.height / rect.height
+        const x = (e.clientX - rect.left) * scaleX
+        const y = (e.clientY - rect.top) * scaleY
+        setTextPosition({ x, y })
+        e.stopPropagation()
+      }
+    },
+    [isAddingText, setTextPosition],
+  )
+  // Shape drawing handlers
+  const handleShapeMouseDown = useCallback(
+    (e) => {
+      if (isErasing) {
+        handleEraserStart(e)
+        return
+      }
+      if (["rectangle", "circle", "arrow", "line"].includes(drawingTool)) {
+        const canvas = e.currentTarget
+        const rect = canvas.getBoundingClientRect()
+        const scaleX = canvas.width / rect.width
+        const scaleY = canvas.height / rect.height
+        const x = (e.clientX - rect.left) * scaleX
+        const y = (e.clientY - rect.top) * scaleY
+        setIsDrawingShape(true)
+        setShapeStart({ x, y })
+        setCurrentShape({
+          type: drawingTool,
+          startX: x,
+          startY: y,
+          endX: x,
+          endY: y,
+          color: brushColor,
+          radius: brushRadius,
+        })
+      }
+    },
+    [
+      drawingTool,
+      brushColor,
+      brushRadius,
+      isErasing,
+      handleEraserStart,
+      setIsDrawingShape,
+      setShapeStart,
+      setCurrentShape,
+    ],
+  )
+  const handleShapeMouseMove = useCallback(
+    (e) => {
+      if (isErasing && isErasingShape) {
+        handleEraserMove(e)
+        return
+      }
+      if (isDrawingShape && shapeStart) {
+        const canvas = e.currentTarget
+        const rect = canvas.getBoundingClientRect()
+        const scaleX = canvas.width / rect.width
+        const scaleY = canvas.height / rect.height
+        const x = (e.clientX - rect.left) * scaleX
+        const y = (e.clientY - rect.top) * scaleY
+        setCurrentShape((prev) => ({
+          ...prev,
+          endX: x,
+          endY: y,
+        }))
+      }
+    },
+    [isDrawingShape, shapeStart, isErasing, isErasingShape, handleEraserMove, setCurrentShape],
+  )
+  const handleShapeMouseUp = useCallback(() => {
+    if (isErasing) {
+      handleEraserEnd()
+      return
+    }
+    if (isDrawingShape && currentShape) {
+      setShapes((prev) => [...prev, currentShape])
+      setCurrentShape(null)
+      setIsDrawingShape(false)
+      setShapeStart(null)
+    }
+  }, [
+    isDrawingShape,
+    currentShape,
+    isErasing,
+    handleEraserEnd,
+    setShapes,
+    setCurrentShape,
+    setIsDrawingShape,
+    setShapeStart,
+  ])
   // Enhanced Text Drag Handlers
   const handleTextMouseDown = useCallback(
     (e, textId) => {
       e.preventDefault()
-      e.stopPropagation() // Prevent wrapper click from unselecting
+      e.stopPropagation()
       const textElement = textElements.find((el) => el.id === textId)
       if (!textElement) return
       const canvas = textCanvasRef.current
@@ -383,9 +685,8 @@ const ManualChat = () => {
       document.addEventListener("mousemove", handleMouseMove)
       document.addEventListener("mouseup", handleMouseUp)
     },
-    [textElements, updateTextElement],
+    [textElements, updateTextElement, setSelectedTextId, setIsDragging, setDragOffset],
   )
-
   // Text Double Click Handler for Editing
   const handleTextDoubleClick = useCallback(
     (textId) => {
@@ -395,7 +696,6 @@ const ManualChat = () => {
       setEditingTextId(textId)
       setEditingTextValue(element.text)
       setSelectedTextId(textId)
-      // Focus the input after state update
       setTimeout(() => {
         if (editTextInputRef.current) {
           editTextInputRef.current.focus()
@@ -403,9 +703,8 @@ const ManualChat = () => {
         }
       }, 100)
     },
-    [textElements],
+    [textElements, setIsEditingText, setEditingTextId, setEditingTextValue, setSelectedTextId],
   )
-
   // Save Text Edit
   const saveTextEdit = useCallback(() => {
     if (editingTextId && editingTextValue.trim()) {
@@ -414,79 +713,13 @@ const ManualChat = () => {
     setIsEditingText(false)
     setEditingTextId(null)
     setEditingTextValue("")
-  }, [editingTextId, editingTextValue, updateTextElement])
-
+  }, [editingTextId, editingTextValue, updateTextElement, setIsEditingText, setEditingTextId, setEditingTextValue])
   // Cancel Text Edit
   const cancelTextEdit = useCallback(() => {
     setIsEditingText(false)
     setEditingTextId(null)
     setEditingTextValue("")
-  }, [])
-
-  // Enhanced Canvas Rendering
-  const renderTextOnCanvas = useCallback(() => {
-    // Remove canvas text rendering to prevent duplicates
-    // Text is now only rendered as HTML elements for better interaction
-  }, [])
-
-  // Re-render text when elements change
-  useEffect(() => {
-    renderTextOnCanvas()
-  }, [renderTextOnCanvas])
-
-  // Image Filter Functions
-  const applyImageFilters = useCallback(() => {
-    const canvas = imageCanvasRef.current
-    if (!canvas || !selectedImage?.content) return
-    const ctx = canvas.getContext("2d")
-    const img = new Image()
-    img.crossOrigin = "anonymous"
-    img.src = selectedImage.content
-    img.onload = () => {
-      canvas.width = img.width
-      canvas.height = img.height
-      // Apply transformations
-      ctx.save()
-      ctx.translate(canvas.width / 2, canvas.height / 2)
-      ctx.rotate((imageTransform.rotation * Math.PI) / 180)
-      ctx.scale(
-        imageTransform.scaleX * (imageTransform.flipX ? -1 : 1),
-        imageTransform.scaleY * (imageTransform.flipY ? -1 : 1),
-      )
-      // Apply filters
-      const filterString = `
-        brightness(${imageFilters.brightness}%)
-        contrast(${imageFilters.contrast}%)
-        saturate(${imageFilters.saturation}%)
-        blur(${imageFilters.blur}px)
-        sepia(${imageFilters.sepia}%)
-        grayscale(${imageFilters.grayscale}%)
-      `
-      ctx.filter = filterString
-      ctx.drawImage(img, -img.width / 2, -img.height / 2)
-      ctx.restore()
-    }
-  }, [selectedImage, imageFilters, imageTransform])
-
-  // Reset Image Filters
-  const resetImageFilters = useCallback(() => {
-    setImageFilters({
-      brightness: 100,
-      contrast: 100,
-      saturation: 100,
-      blur: 0,
-      sepia: 0,
-      grayscale: 0,
-    })
-    setImageTransform({
-      rotation: 0,
-      scaleX: 1,
-      scaleY: 1,
-      flipX: false,
-      flipY: false,
-    })
-  }, [])
-
+  }, [setIsEditingText, setEditingTextId, setEditingTextValue])
   // Enhanced Send Annotation Function
   const handleSendAnnotation = async () => {
     setLoading(true)
@@ -494,41 +727,32 @@ const ManualChat = () => {
     try {
       const drawingCanvas = canvasRef.current.canvas.drawing
       const textCanvas = textCanvasRef.current
-      const imageCanvas = imageCanvasRef.current
+      const shapeCanvas = shapeCanvasRef.current
       const width = drawingCanvas.width
       const height = drawingCanvas.height
-
       // Create merged canvas
       const mergedCanvas = document.createElement("canvas")
       mergedCanvas.width = width
       mergedCanvas.height = height
       const ctx = mergedCanvas.getContext("2d")
-
       const backgroundImg = new Image()
       backgroundImg.crossOrigin = "anonymous"
       backgroundImg.src = selectedImage.content
       backgroundImg.onload = () => {
-        // Draw background image (with filters if applied)
-        if (
-          imageCanvas &&
-          (imageFilters.brightness !== 100 || imageFilters.contrast !== 100 || imageTransform.rotation !== 0)
-        ) {
-          ctx.drawImage(imageCanvas, 0, 0, width, height)
-        } else {
-          ctx.drawImage(backgroundImg, 0, 0, width, height)
+        // Draw background image
+        ctx.drawImage(backgroundImg, 0, 0, width, height)
+        // Draw shapes
+        if (shapeCanvas) {
+          ctx.drawImage(shapeCanvas, 0, 0, width, height)
         }
-
         // Draw drawing annotations
         ctx.drawImage(drawingCanvas, 0, 0, width, height)
-
-        // Draw text annotations from HTML elements onto the merged canvas
+        // Draw text annotations
         textElements.forEach((element) => {
           ctx.font = `${element.fontStyle} ${element.fontWeight} ${element.fontSize}px ${element.fontFamily}`
           ctx.fillStyle = element.color
           ctx.textAlign = element.textAlign
-          ctx.textBaseline = "top" // Align text to top for consistent positioning
-
-          // Calculate text position based on alignment
+          ctx.textBaseline = "top"
           let textX = element.x
           if (element.textAlign === "center") {
             textX += element.padding + (element.width || ctx.measureText(element.text).width) / 2
@@ -537,38 +761,28 @@ const ManualChat = () => {
           } else {
             textX += element.padding
           }
-
           const textY = element.y + element.padding
-
-          // Draw background if not transparent
           if (element.backgroundColor !== "transparent") {
             const textWidth = ctx.measureText(element.text).width
             const textHeight = element.fontSize
             ctx.fillStyle = element.backgroundColor
             ctx.fillRect(element.x, element.y, textWidth + element.padding * 2, textHeight + element.padding * 2)
-            ctx.fillStyle = element.color // Reset fill style for text
+            ctx.fillStyle = element.color
           }
-
           ctx.fillText(element.text, textX, textY)
-
-          // Draw underline if applied
           if (element.textDecoration === "underline") {
             const textWidth = ctx.measureText(element.text).width
-            const underlineY = textY + element.fontSize + 2 // Adjust position
-            ctx.fillRect(textX, underlineY, textWidth, 1) // Draw a line for underline
+            const underlineY = textY + element.fontSize + 2
+            ctx.fillRect(textX, underlineY, textWidth, 1)
           }
         })
-
         const mergedDataUrl = mergedCanvas.toDataURL("image/png")
         const annotatedFile = {
           name: `annotated_${selectedImage?.name || "image.png"}`,
           type: "image/png",
           content: mergedDataUrl,
         }
-
-        // Get current user info for sender details
         const currentUserInfo = getSenderInfo(userData._id)
-
         socket.emit("manual_file_upload", {
           room: currentRoomId,
           fileData: annotatedFile,
@@ -593,7 +807,7 @@ const ManualChat = () => {
         setTextElements([])
         setTextHistory([])
         setHistoryIndex(-1)
-        resetImageFilters()
+        setShapes([])
         if (replyingTo) cancelReply()
       }
       backgroundImg.onerror = () => {
@@ -606,7 +820,6 @@ const ManualChat = () => {
       setLoading(false)
     }
   }
-
   // Enhanced Clear Function
   const handleClear = () => {
     if (canvasRef.current) {
@@ -615,9 +828,9 @@ const ManualChat = () => {
     setTextElements([])
     setTextHistory([])
     setHistoryIndex(-1)
-    resetImageFilters()
+    setShapes([])
+    setCurrentShape(null)
   }
-
   // Enhanced Undo Function
   const handleUndo = () => {
     if (canvasRef.current) {
@@ -625,43 +838,25 @@ const ManualChat = () => {
     }
     undoTextAction()
   }
-
-  // Enhanced Redo Function
-  const handleRedo = () => {
-    redoTextAction()
-  }
-
   // Handle click outside text elements to unselect
   const handleCanvasWrapperClick = useCallback(
     (e) => {
-      // If we are currently dragging, don't unselect immediately.
-      // The mouseup event for dragging will handle the end of the drag.
       if (isDragging) {
         return
       }
-
-      // Check if the click target is a text element or any of its direct children (like controls)
       const clickedOnTextElement = e.target.closest(".text-element")
-
-      // Check if the click target is the text input field for adding new text
       const clickedOnTextInput = e.target.closest(".form-control.form-control-sm")
-
-      // Check if the click target is within the text editing modal content
       const clickedOnEditTextModalContent = e.target.closest(".chat-screen-text-edit-modal")
-
-      // If the click was not on an existing text element, the new text input, or the edit modal, then unselect
       if (!clickedOnTextElement && !clickedOnTextInput && !clickedOnEditTextModalContent) {
         setSelectedTextId(null)
-        // If currently adding text and no text was entered, cancel the adding mode
         if (isAddingText && !textInput.trim()) {
           setTextPosition(null)
           setIsAddingText(false)
         }
       }
     },
-    [isDragging, isAddingText, textInput],
+    [isDragging, isAddingText, textInput, setSelectedTextId, setTextPosition, setIsAddingText],
   )
-
   // Check for mobile view
   useEffect(() => {
     const handleResize = () => {
@@ -671,7 +866,6 @@ const ManualChat = () => {
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
-
   // Handle image click
   const handleImageClick = (image) => {
     setSelectedImage(image)
@@ -680,23 +874,24 @@ const ManualChat = () => {
     setTextElements([])
     setTextHistory([])
     setHistoryIndex(-1)
-    resetImageFilters()
+    setShapes([])
+    setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
   }
-
   // Handle modal close
   const handleCloseModal = () => {
     setShowModal(false)
     setIsAnnotating(false)
-    setShowImageEditor(false)
     setTextElements([])
     setTextHistory([])
     setHistoryIndex(-1)
-    resetImageFilters()
+    setShapes([])
+    setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
     if (canvasRef.current) {
       canvasRef.current.clear()
     }
   }
-
   // Download URL effect
   useEffect(() => {
     if (!selectedImage?.content) return
@@ -713,7 +908,6 @@ const ManualChat = () => {
       if (url?.startsWith("blob:")) URL.revokeObjectURL(url)
     }
   }, [selectedImage])
-
   // Enhanced download function
   const handleBase64Download = () => {
     try {
@@ -746,10 +940,8 @@ const ManualChat = () => {
       console.error("Error during base64 download:", error)
     }
   }
-
   const id = userData?._id || ""
   const role = userData?.role || ""
-
   // Handle mobile view chat selection
   const handleChatSelection = (chatId, chat) => {
     handleChatStart(chatId)
@@ -758,12 +950,10 @@ const ManualChat = () => {
       setShowChatList(false)
     }
   }
-
   // Back to chat list (mobile)
   const handleBackToList = () => {
     setShowChatList(true)
   }
-
   const fetchWithRetry = async (url, retries = 3, delay = 1000) => {
     for (let i = 0; i < retries; i++) {
       try {
@@ -775,7 +965,6 @@ const ManualChat = () => {
       }
     }
   }
-
   // Fetch group chat status
   useEffect(() => {
     const fetchGroupChatStatus = async () => {
@@ -800,8 +989,7 @@ const ManualChat = () => {
     if (currentRoomId) {
       fetchGroupChatStatus()
     }
-  }, [currentRoomId])
-
+  }, [currentRoomId, userData])
   // Fetch group chat history
   const fetchGroupChatHistory = useCallback(async () => {
     setLoading(true)
@@ -822,11 +1010,9 @@ const ManualChat = () => {
       setLoading(false)
     }
   }, [userData])
-
   useEffect(() => {
     fetchGroupChatHistory()
   }, [fetchGroupChatHistory])
-
   // Get group members excluding current user
   const getGroupMembers = useCallback(
     (chat) => {
@@ -858,7 +1044,6 @@ const ManualChat = () => {
     },
     [userData],
   )
-
   const handleCallMember = useCallback(async (member, selectedChat) => {
     setLoading(true)
     if (!userData) {
@@ -870,7 +1055,7 @@ const ManualChat = () => {
       toast.error(`No phone number available for ${member?.name || "this member"}`)
       return
     }
-    const cleanedNumber = phoneNumber.replace(/[^+\d]/g, "")
+    const cleanedNumber = phoneNumber.replace(/[^+\\d]/g, "")
     try {
       if (cleanedNumber) {
         const room = selectedChat?._id
@@ -888,7 +1073,6 @@ const ManualChat = () => {
       setLoading(false)
     }
   }, [])
-
   // Handle selecting a group chat from the sidebar
   const handleChatStart = useCallback(
     async (chatId) => {
@@ -903,7 +1087,7 @@ const ManualChat = () => {
         const userId = chatData?.userId?._id
         const providerIds = chatData?.providerIds?.map((provider) => provider._id) || []
         setChatData(chatData || {})
-        setSelectedChat(chatData) // Set this before setting messages
+        setSelectedChat(chatData)
         setGroupName(chatData?.groupName || "Group Chat")
         // Build participants map first
         buildParticipantsMap(chatData)
@@ -912,6 +1096,7 @@ const ManualChat = () => {
           const senderInfo = getSenderInfo(msg.sender)
           return {
             ...msg,
+            senderId: msg.sender, // Ensure senderId is always present
             senderName: senderInfo.name,
             senderRole: senderInfo.role,
           }
@@ -947,7 +1132,6 @@ const ManualChat = () => {
     },
     [userData, socket, getGroupMembers, buildParticipantsMap, getSenderInfo],
   )
-
   const endGroupChat = useCallback(() => {
     try {
       socket.emit("manual_end_chat", {
@@ -968,7 +1152,6 @@ const ManualChat = () => {
       console.error("Error ending group chat:", error)
     }
   }, [socket, selectedUserId, selectedProviderIds, userData, currentRoomId, fetchGroupChatHistory])
-
   // Navigation handling
   useEffect(() => {
     const handleClick = (e) => {
@@ -987,7 +1170,6 @@ const ManualChat = () => {
     document.body.addEventListener("click", handleClick)
     return () => document.body.removeEventListener("click", handleClick)
   }, [isChatOnGoing])
-
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (isChatOnGoing && !isUserConfirming) {
@@ -999,7 +1181,6 @@ const ManualChat = () => {
     window.addEventListener("beforeunload", handleBeforeUnload)
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [isChatOnGoing, isUserConfirming])
-
   const confirmNavigation = async () => {
     setIsUserConfirming(true)
     await endGroupChat()
@@ -1011,11 +1192,126 @@ const ManualChat = () => {
       window.location.reload()
     }
   }
-
   const cancelNavigation = () => {
     setNextPath(null)
     setShowPrompt(false)
   }
+
+  // Voice Note Recording Functions
+  const startRecording = useCallback(async () => {
+    if (isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid") {
+      toast.error("Chat is ended or payment is pending.")
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      setAudioChunks([])
+      setRecordedAudioUrl(null)
+      setRecordingDuration(0)
+
+      mediaRecorder.ondataavailable = (event) => {
+        setAudioChunks((prev) => [...prev, event.data])
+      }
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: "audio/webm" })
+        const audioUrl = URL.createObjectURL(audioBlob)
+        setRecordedAudioUrl(audioUrl)
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach((track) => track.stop())
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+      toast.success("Recording started...")
+
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1)
+      }, 1000)
+    } catch (error) {
+      console.error("Error starting recording:", error)
+      toast.error("Failed to start recording. Please check microphone permissions.")
+    }
+  }, [isChatEnded, chatData])
+
+  const stopRecording = useCallback(() => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+      clearInterval(recordingIntervalRef.current)
+      toast.success("Recording stopped.")
+    }
+  }, [])
+
+  const sendRecordedAudio = useCallback(async () => {
+    if (!recordedAudioUrl) {
+      toast.error("No audio recorded to send.")
+      return
+    }
+
+    const uploadingToast = toast.loading("Sending voice note...")
+    try {
+      const response = await fetch(recordedAudioUrl)
+      const audioBlob = await response.blob()
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const fileData = {
+          name: `voice_note_${Date.now()}.webm`,
+          type: audioBlob.type,
+          content: reader.result, // Base64 string
+        }
+
+        const currentUserInfo = getSenderInfo(userData._id)
+        socket.emit("manual_audio_upload", {
+          room: currentRoomId,
+          fileData,
+          senderId: userData._id,
+          senderName: currentUserInfo.name,
+          senderRole: currentUserInfo.role,
+          timestamp: new Date().toISOString(),
+          ...(replyingTo && {
+            replyTo: {
+              messageId: replyingTo.messageIndex.toString(),
+              text: replyingTo.text || (replyingTo.file ? "Image" : replyingTo.audio ? "Voice Note" : ""),
+              senderName: replyingTo.senderName,
+              senderRole: replyingTo.senderRole,
+              isFile: !!replyingTo.file,
+              isAudio: !!replyingTo.audio,
+              timestamp: replyingTo.originalTimestamp,
+            },
+          }),
+        })
+        toast.dismiss(uploadingToast)
+        toast.success("Voice note sent!")
+        cancelRecordedAudio()
+        if (replyingTo) cancelReply()
+      }
+      reader.readAsDataURL(audioBlob)
+    } catch (error) {
+      toast.dismiss(uploadingToast)
+      toast.error("Failed to send voice note.")
+      console.error("Error sending voice note:", error)
+    }
+  }, [recordedAudioUrl, userData, currentRoomId, socket, replyingTo, cancelReply, getSenderInfo])
+
+  const cancelRecordedAudio = useCallback(() => {
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl)
+    }
+    setRecordedAudioUrl(null)
+    setAudioChunks([])
+    setRecordingDuration(0)
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current)
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop() // Ensure media recorder is stopped and tracks are released
+      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
+    }
+  }, [recordedAudioUrl])
 
   // Socket event listeners for group chat
   useEffect(() => {
@@ -1027,8 +1323,7 @@ const ManualChat = () => {
         userId: id,
       })
     })
-
-    // Enhanced message handler to properly handle files and replies
+    // Enhanced message handler to properly handle files, audio and replies
     socket.on("return_message", (data) => {
       console.log("Received message from others:", data)
       // Get sender info for the incoming message
@@ -1049,13 +1344,20 @@ const ManualChat = () => {
           content: data.file.content,
         }
       }
+      // If it's an audio message, ensure audio structure is correct
+      if (data.audio) {
+        messageObj.audio = {
+          name: data.audio.name,
+          type: data.audio.type,
+          content: data.audio.content,
+        }
+      }
       // Handle reply data
       if (data.replyTo) {
         messageObj.replyTo = data.replyTo
       }
       setMessages((prev) => [...prev, messageObj])
     })
-
     socket.on("user_status", ({ userId, astrologerId, status, role }) => {
       if (role === "provider") {
         setConnectedProviders((prev) => {
@@ -1070,24 +1372,19 @@ const ManualChat = () => {
       }
       setStatus(status)
     })
-
     socket.on("room_joined", (data) => {
       console.log("Room joined:", data.message)
     })
-
     socket.on("error_message", (data) => {
       toast.error(data.message)
       setIsChatBoxActive(false)
     })
-
     socket.on("wrong_message", (data) => {
       toast.error(data.message)
     })
-
     socket.on("message_sent", (data) => {
       console.log("Message sent confirmation:", data)
     })
-
     socket.on("chat_ended", (data) => {
       if (data.success) {
         setIsChatStarted(false)
@@ -1101,7 +1398,6 @@ const ManualChat = () => {
         toast.error(data.message || "Error ending group chat")
       }
     })
-
     return () => {
       socket.off("connect")
       socket.off("return_message")
@@ -1113,10 +1409,11 @@ const ManualChat = () => {
       socket.off("message_sent")
       socket.off("file_upload_success")
       socket.off("file_upload_error")
+      socket.off("audio_upload_success") // New cleanup
+      socket.off("audio_upload_error") // New cleanup
       socket.off("chat_ended")
     }
   }, [id, socket, userData, selectedProviderIds, getSenderInfo])
-
   // Content validation for messages
   const validateMessageContent = useCallback((messageText) => {
     if (!messageText || typeof messageText !== "string" || messageText.trim() === "") {
@@ -1125,11 +1422,10 @@ const ManualChat = () => {
     const prohibitedPatterns = [
       /\b\d{10}\b/,
       /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
-      /18\+|\bsex\b|\bxxx\b|\bcall\b|\bphone\b|\bmobile|\bteliphone\b|\bnudes\b|\bporn\b|\bsex\scall\b|\btext\b|\bwhatsapp\b|\bskype\b|\btelegram\b|\bfacetime\b|\bvideo\schat\b|\bdial\snumber\b|\bmessage\b/i,
+      /18+|\bsex\b|\bxxx\b|\bcall\b|\bphone\b|\bmobile|\bteliphone\b|\bnudes\b|\bporn\b|\bsex\scall\b|\btext\b|\bwhatsapp\b|\bskype\b|\btelegram\b|\bfacetime\b|\bvideo\schat\b|\bdial\snumber\b|\bmessage\b/i,
     ]
     return !prohibitedPatterns.some((pattern) => pattern.test(messageText))
   }, [])
-
   // Enhanced file upload handler
   const handleFileChange = useCallback(
     (event) => {
@@ -1190,7 +1486,6 @@ const ManualChat = () => {
     },
     [userData, currentRoomId, socket, replyingTo, cancelReply, getSenderInfo],
   )
-
   const handleUpdateGroupName = useCallback(
     async (newGroupName) => {
       if (!newGroupName || typeof newGroupName !== "string") {
@@ -1198,7 +1493,9 @@ const ManualChat = () => {
         return
       }
       try {
-        const response = await axios.put(`${ENDPOINT}api/v1/update_group_name/${currentRoomId}`, { groupName: newGroupName })
+        const response = await axios.put(`${ENDPOINT}api/v1/update_group_name/${currentRoomId}`, {
+          groupName: newGroupName,
+        })
         if (response.data.success) {
           toast.success("Group name updated successfully")
           setGroupName(newGroupName)
@@ -1209,9 +1506,8 @@ const ManualChat = () => {
         toast.error("An error occurred while updating group name")
       }
     },
-    [currentRoomId]
+    [currentRoomId],
   )
-
   // Handle message submission with reply support
   const handleSubmit = useCallback(
     (e) => {
@@ -1239,10 +1535,11 @@ const ManualChat = () => {
           ...(replyingTo && {
             replyTo: {
               messageId: replyingTo.messageIndex.toString(),
-              text: replyingTo.text || (replyingTo.file ? "Image" : ""),
+              text: replyingTo.text || (replyingTo.file ? "Image" : replyingTo.audio ? "Voice Note" : ""),
               senderName: replyingTo.senderName,
               senderRole: replyingTo.senderRole,
               isFile: !!replyingTo.file,
+              isAudio: !!replyingTo.audio,
               timestamp: replyingTo.originalTimestamp,
             },
           }),
@@ -1256,7 +1553,6 @@ const ManualChat = () => {
     },
     [message, userData, currentRoomId, socket, validateMessageContent, replyingTo, cancelReply, getSenderInfo],
   )
-
   // Filter group chats based on search term
   const filteredChats = useMemo(() => {
     return allGroupChats.filter((chat) => {
@@ -1264,7 +1560,6 @@ const ManualChat = () => {
       return groupName.toLowerCase().includes(searchTerm.toLowerCase())
     })
   }, [allGroupChats, searchTerm])
-
   // Get participant names for display
   const getParticipantNames = (chat) => {
     if (userData?.role === "provider") {
@@ -1274,302 +1569,58 @@ const ManualChat = () => {
       return providerNames
     }
   }
-
   const isMobile = window.innerWidth <= 710
   const canvasWidth = Math.min(800, window.innerWidth - 50)
   const canvasHeight = isMobile ? 170 : Math.min(600, window.innerHeight - 100)
-
-  const BrushColorPicker = ({ brushColor, setBrushColor, brushRadius, setBrushRadius }) => {
-    // Predefined color palette
-    const predefinedColors = [
-      '#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff',
-      '#000000', '#ffffff', '#808080', '#800000', '#008000', '#000080',
-      '#ff8000', '#8000ff', '#ff0080', '#80ff00', '#00ff80', '#0080ff',
-      '#ff8080', '#80ff80', '#8080ff', '#ffff80', '#ff80ff', '#80ffff'
-    ];
-
-    const getColorName = (hex) => {
-      const colorNames = {
-        '#ff0000': 'Red', '#00ff00': 'Green', '#0000ff': 'Blue',
-        '#ffff00': 'Yellow', '#ff00ff': 'Magenta', '#00ffff': 'Cyan',
-        '#000000': 'Black', '#ffffff': 'White', '#808080': 'Gray',
-        '#800000': 'Maroon', '#008000': 'Dark Green', '#000080': 'Navy',
-        '#ff8000': 'Orange', '#8000ff': 'Purple', '#ff0080': 'Pink'
-      };
-      return colorNames[hex.toLowerCase()] || 'Custom Color';
-    };
-
+  // Compact Color Picker Component
+  const CompactColorPicker = ({ brushColor, setBrushColor, brushRadius, setBrushRadius }) => {
+    const quickColors = [
+      "#ff0000",
+      "#00ff00",
+      "#0000ff",
+      "#ffff00",
+      "#ff00ff",
+      "#00ffff",
+      "#000000",
+      "#ffffff",
+      "#808080",
+      "#ff8000",
+    ]
     return (
-      <div className="enhanced-brush-controls">
-        <style jsx>{`
-        .enhanced-brush-controls {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-          padding: 16px;
-          background: #f8f9fa;
-          border-radius: 8px;
-          border: 1px solid #e9ecef;
-          margin-bottom: 16px;
-        }
-
-        .control-section {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .section-title {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-weight: 600;
-          font-size: 14px;
-          color: #495057;
-        }
-
-        .current-color-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 8px 12px;
-          background: white;
-          border-radius: 6px;
-          border: 1px solid #dee2e6;
-        }
-
-        .color-preview-large {
-          width: 40px;
-          height: 40px;
-          border-radius: 8px;
-          border: 2px solid #dee2e6;
-          cursor: pointer;
-          transition: transform 0.2s ease;
-        }
-
-        .color-preview-large:hover {
-          transform: scale(1.05);
-        }
-
-        .color-info {
-          flex: 1;
-        }
-
-        .color-name {
-          font-weight: 500;
-          font-size: 14px;
-          color: #212529;
-        }
-
-        .color-value {
-          font-size: 12px;
-          color: #6c757d;
-          font-family: monospace;
-        }
-
-        .color-grid {
-          display: grid;
-          grid-template-columns: repeat(8, 1fr);
-          gap: 4px;
-          padding: 12px;
-          background: white;
-          border-radius: 6px;
-          border: 1px solid #dee2e6;
-        }
-
-        .color-swatch {
-          width: 24px;
-          height: 24px;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          border: 2px solid transparent;
-        }
-
-        .color-swatch:hover {
-          transform: scale(1.1);
-          box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-        }
-
-        .color-swatch.selected {
-          border-color: #007bff;
-          transform: scale(1.1);
-        }
-
-        .custom-color-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 8px 12px;
-          background: white;
-          border-radius: 6px;
-          border: 1px solid #dee2e6;
-        }
-
-        .custom-color-input {
-          width: 40px;
-          height: 32px;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-        }
-
-        .size-controls {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 8px 12px;
-          background: white;
-          border-radius: 6px;
-          border: 1px solid #dee2e6;
-        }
-
-        .size-slider {
-          flex: 1;
-          height: 4px;
-          background: #e9ecef;
-          border-radius: 2px;
-          outline: none;
-          -webkit-appearance: none;
-        }
-
-        .size-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          width: 16px;
-          height: 16px;
-          background: #007bff;
-          border-radius: 50%;
-          cursor: pointer;
-        }
-
-        .size-badge {
-          background: #007bff;
-          color: white;
-          padding: 4px 8px;
-          border-radius: 12px;
-          font-size: 12px;
-          font-weight: 500;
-          min-width: 35px;
-          text-align: center;
-        }
-
-        .brush-preview {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 16px;
-          background: white;
-          border-radius: 6px;
-          border: 1px solid #dee2e6;
-        }
-
-        .preview-dot {
-          border-radius: 50%;
-          transition: all 0.3s ease;
-        }
-      `}</style>
-
-        {/* Current Color Display */}
-        <div className="control-section">
-          <div className="section-title">
-            <MdColorize size={16} />
-            Current Brush Color
-          </div>
-          <div className="current-color-row">
-            <div
-              className="color-preview-large"
-              style={{
-                backgroundColor: brushColor,
-                border: brushColor === '#ffffff' ? '2px solid #adb5bd' : '2px solid #dee2e6'
-              }}
-              onClick={() => document.getElementById('brushColorInput').click()}
-            />
-            <div className="color-info">
-              <div className="color-name">{getColorName(brushColor)}</div>
-              <div className="color-value">{brushColor.toUpperCase()}</div>
+      <div className="compact-brush-controls">
+        <div className="color-size-row">
+          <div className="color-section">
+            <label>Color:</label>
+            <div className="color-options">
+              {quickColors.map((color) => (
+                <div
+                  key={color}
+                  className={`color-dot ${brushColor === color ? "active" : ""}`}
+                  style={{ backgroundColor: color }}
+                  onClick={() => setBrushColor(color)}
+                  title={color}
+                />
+              ))}
             </div>
           </div>
-        </div>
-
-        {/* Quick Color Selection */}
-        <div className="control-section">
-          <div className="section-title">
-            <MdPalette size={16} />
-            Quick Colors
-          </div>
-          <div className="color-grid">
-            {predefinedColors.map((color) => (
-              <div
-                key={color}
-                className={`color-swatch ${brushColor === color ? 'selected' : ''}`}
-                style={{
-                  backgroundColor: color,
-                  border: color === '#ffffff' ? '2px solid #adb5bd' : '2px solid transparent'
-                }}
-                onClick={() => setBrushColor(color)}
-                title={getColorName(color)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Custom Color */}
-        {/* <div className="control-section">
-          <div className="custom-color-row">
-            <input
-              id="brushColorInput"
-              type="color"
-              value={brushColor}
-              onChange={(e) => setBrushColor(e.target.value)}
-              className="custom-color-input"
-            />
-            <span>Custom Color Picker</span>
-          </div>
-        </div> */}
-
-        {/* Brush Size */}
-        <div className="control-section">
-          <div className="section-title">
-            Brush Size
-          </div>
-          <div className="size-controls">
+          <div className="size-section">
+            <label>Size: {brushRadius}px</label>
             <input
               type="range"
               min="1"
               max="20"
               value={brushRadius}
-              onChange={(e) => setBrushRadius(parseInt(e.target.value))}
+              onChange={(e) => setBrushRadius(Number.parseInt(e.target.value))}
               className="size-slider"
-            />
-            <div className="size-badge">
-              {brushRadius}px
-            </div>
-          </div>
-        </div>
-
-        {/* Brush Preview */}
-        <div className="control-section">
-          <div className="section-title">Preview</div>
-          <div className="brush-preview">
-            <div
-              className="preview-dot"
-              style={{
-                backgroundColor: brushColor,
-                width: `${Math.max(brushRadius * 2, 6)}px`,
-                height: `${Math.max(brushRadius * 2, 6)}px`,
-                border: brushColor === '#ffffff' ? '1px solid #adb5bd' : 'none'
-              }}
             />
           </div>
         </div>
       </div>
-    );
-  };
-
+    )
+  }
   if (!userData) {
     return <AccessDenied />
   }
-
   if (loading) {
     return (
       <div
@@ -1595,7 +1646,6 @@ const ManualChat = () => {
       </div>
     )
   }
-
   return (
     <div className="modern-chat-container">
       <div className="container-fluid p-0">
@@ -1638,7 +1688,8 @@ const ManualChat = () => {
                         <div className="participants">{getParticipantNames(chat)}</div>
                         <div className="last-message">
                           {chat?.messages?.[chat?.messages.length - 1]?.text ||
-                            (chat?.messages?.[chat?.messages.length - 1]?.file ? "File Attached" : "No messages yet")}
+                            (chat?.messages?.[chat?.messages.length - 1]?.file ? "File Attached" :
+                            chat?.messages?.[chat?.messages.length - 1]?.audio ? "Voice Note" : "No messages yet")}
                         </div>
                       </div>
                       <div className="chat-meta">
@@ -1692,39 +1743,39 @@ const ManualChat = () => {
                         )}
                       </div>
                       <div className="chatn-user-details">
-                        <div className="chatn-user-name" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="chatn-user-name" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           {isEditingGroupName ? (
                             <>
                               <input
                                 value={groupName}
                                 onChange={(e) => setGroupName(e.target.value)}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    handleUpdateGroupName(groupName);
-                                    setIsEditingGroupName(false);
+                                  if (e.key === "Enter") {
+                                    handleUpdateGroupName(groupName)
+                                    setIsEditingGroupName(false)
                                   }
                                 }}
                                 autoFocus
                                 className="group-name-input"
                               />
-                              <button onClick={() => {
-                                handleUpdateGroupName(groupName);
-                                setIsEditingGroupName(false);
-                              }}>
-                                ✅
+                              <button
+                                onClick={() => {
+                                  handleUpdateGroupName(groupName)
+                                  setIsEditingGroupName(false)
+                                }}
+                              >
+                                {'✅'}
                               </button>
                             </>
                           ) : (
                             <>
                               <span>{groupName || selectedChat?.groupName || "Group Chat"}</span>
-                              {/* {userData?.role === "provider" && ( */}
                               <Pencil
                                 size={16}
-                                style={{ cursor: 'pointer' }}
+                                style={{ cursor: "pointer" }}
                                 onClick={() => setIsEditingGroupName(true)}
                                 title="Edit Group Name"
                               />
-                              {/* )} */}
                             </>
                           )}
                         </div>
@@ -1736,8 +1787,8 @@ const ManualChat = () => {
                       </div>
                     </div>
                     <div className="chatn-actions">
-                      {groupMembers.length > 0 && (
-                        isChatEnded ? (
+                      {groupMembers.length > 0 &&
+                        (isChatEnded ? (
                           <></>
                         ) : (
                           <Dropdown>
@@ -1767,9 +1818,7 @@ const ManualChat = () => {
                               ))}
                             </Dropdown.Menu>
                           </Dropdown>
-                        )
-
-                      )}
+                        ))}
                     </div>
                   </div>
                   {chatData?.PaymentStatus?.toLowerCase() !== "paid" ? (
@@ -1806,7 +1855,7 @@ const ManualChat = () => {
                                   <div className="chatn-reply-content">
                                     <div className="chatn-reply-sender">{msg.replyTo.senderName}</div>
                                     <div className="chatn-reply-text">
-                                      {msg.replyTo.isFile ? "📷 Image" : msg.replyTo.text}
+                                      {msg.replyTo.isFile ? "📷 Image" : msg.replyTo.isAudio ? "🎤 Voice Note" : msg.replyTo.text}
                                     </div>
                                     <div className="chatn-reply-time">
                                       {new Date(msg.timestamp).toLocaleTimeString("en-US", {
@@ -1843,9 +1892,28 @@ const ManualChat = () => {
                                     </button>
                                   </div>
                                 </div>
+                              ) : msg.audio ? ( 
+                                <div className="chatn-message-bubble chatn-audio-message">
+                                  <audio controls src={msg.audio.content} className="chatn-audio-player" />
+                                  <div className="chatn-message-actions">
+                                    <div className="chatn-message-time">
+                                      {new Date(msg.timestamp).toLocaleTimeString("en-US", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </div>
+                                    <button
+                                      className="chatn-reply-button"
+                                      onClick={() => handleReplyClick(msg, idx)}
+                                      title="Reply to this message"
+                                    >
+                                      <MdReply size={16} />
+                                    </button>
+                                  </div>
+                                </div>
                               ) : (
                                 <div className="chatn-message-bubble">
-                                  <div className="chatn-message-text">{msg.text}</div>
+                                  <div className="chatn-message-text">msg.text</div>
                                   <div className="chatn-message-actions">
                                     <div className="chatn-message-time">
                                       {new Date(msg.timestamp).toLocaleTimeString("en-US", {
@@ -1868,7 +1936,7 @@ const ManualChat = () => {
                         })
                       )}
                     </ScrollToBottom>
-                  )}
+                  )}\
                   {/* Enhanced Image Annotation Modal */}
                   <Modal
                     show={showModal}
@@ -1887,61 +1955,98 @@ const ManualChat = () => {
                     <Modal.Body className="chat-screen-modal-body">
                       {selectedImage && (
                         <div className="chat-screen-annotation-container">
-                          {/* Enhanced Annotation Controls */}
+                          {/* Compact Annotation Controls */}
                           {isAnnotating && (
-                            <div className="chat-screen-annotation-controls">
-                              <div style={{ flexDirection: "column" }} className="chat-screen-controls-row">
-                                <div className="chat-screen-controls-left">
-                                  <div className="" style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: "8px" }}>
-                                    {/* Drawing Tools */}
-                                    <div className="chat-screen-control-group">
-                                      <label className="chat-screen-label">Drawing Tool:</label>
-                                      <div className="chat-screen-tool-buttons">
-                                        <button
-                                          className={`chat-screen-tool-btn ${drawingTool === "brush" ? "active" : ""}`}
-                                          onClick={() => setDrawingTool("brush")}
-                                          title="Brush"
-                                        >
-                                          <MdBrush />
-                                        </button>
-                                        <button
-                                          className={`chat-screen-tool-btn ${drawingTool === "rectangle" ? "active" : ""}`}
-                                          onClick={() => setDrawingTool("rectangle")}
-                                          title="Rectangle"
-                                        >
-                                          <MdRectangle />
-                                        </button>
-                                        <button
-                                          className={`chat-screen-tool-btn ${drawingTool === "circle" ? "active" : ""}`}
-                                          onClick={() => setDrawingTool("circle")}
-                                          title="Circle"
-                                        >
-                                          <MdCircle />
-                                        </button>
-                                        <button
-                                          className={`chat-screen-tool-btn ${drawingTool === "arrow" ? "active" : ""}`}
-                                          onClick={() => setDrawingTool("arrow")}
-                                          title="Arrow"
-                                        >
-                                          <MdArrowForward />
-                                        </button>
-                                      </div>
-                                    </div>
-                                    {/* Drawing Controls */}
-                                    <BrushColorPicker
-                                      brushColor={brushColor}
-                                      setBrushColor={setBrushColor}
-                                      brushRadius={brushRadius}
-                                      setBrushRadius={setBrushRadius}
-                                    />
+                            <div className="chat-screen-compact-controls">
+                              {/* Tool Selection Row */}
+                              <div className="tools-row">
+                                <div className="tool-group">
+                                  <label>Tools:</label>
+                                  <div className="tool-buttons">
+                                    <button
+                                      className={`tool-btn ${drawingTool === "brush" && !isErasing ? "active" : ""}`}
+                                      onClick={() => {
+                                        setDrawingTool("brush")
+                                        setIsErasing(false)
+                                      }}
+                                      title="Brush"
+                                    >
+                                      <MdBrush />
+                                    </button>
+                                    <button
+                                      className={`tool-btn ${isErasing ? "active" : ""}`}
+                                      onClick={() => {
+                                        setIsErasing(!isErasing)
+                                        setDrawingTool("brush")
+                                      }}
+                                      title="Eraser"
+                                    >
+                                      {'🧽'}
+                                    </button>
+                                    <button
+                                      className={`tool-btn ${drawingTool === "rectangle" ? "active" : ""}`}
+                                      onClick={() => {
+                                        setDrawingTool("rectangle")
+                                        setIsErasing(false)
+                                      }}
+                                      title="Rectangle"
+                                    >
+                                      <MdRectangle />
+                                    </button>
+                                    <button
+                                      className={`tool-btn ${drawingTool === "circle" ? "active" : ""}`}
+                                      onClick={() => {
+                                        setDrawingTool("circle")
+                                        setIsErasing(false)
+                                      }}
+                                      title="Circle"
+                                    >
+                                      <MdCircle />
+                                    </button>
+                                    <button
+                                      className={`tool-btn ${drawingTool === "arrow" ? "active" : ""}`}
+                                      onClick={() => {
+                                        setDrawingTool("arrow")
+                                        setIsErasing(false)
+                                      }}
+                                      title="Arrow"
+                                    >
+                                      <MdArrowForward />
+                                    </button>
+                                    <button
+                                      className={`tool-btn ${isAddingText ? "active" : ""}`}
+                                      onClick={() => setIsAddingText(!isAddingText)}
+                                      title="Add Text"
+                                    >
+                                      <MdPinEnd />
+                                    </button>
                                   </div>
-                                  {/* Text Controls */}
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: "20px" }} className="chat-screen-text-controls">
-                                    <div className="chat-screen-control-group">
-                                      <label className="chat-screen-label">
-                                        <MdFormatSize className="me-1" />
-                                        Text Size:
-                                      </label>
+                                </div>
+                                <div className="action-group">
+                                  <button className="action-btn undo-btn" onClick={handleUndo} title="Undo">
+                                    <MdUndo />
+                                  </button>
+                                  <button className="action-btn clear-btn" onClick={handleClear} title="Clear All">
+                                    <MdClear />
+                                  </button>
+                                  <button className="action-btn zoom-btn" onClick={resetZoom} title="Reset Zoom">
+                                    <MdCenterFocusWeak />
+                                  </button>
+                                </div>
+                              </div>
+                              {/* Brush/Eraser Controls Row */}
+                              <CompactColorPicker
+                                brushColor={brushColor}
+                                setBrushColor={setBrushColor}
+                                brushRadius={isErasing ? eraserRadius : brushRadius}
+                                setBrushRadius={isErasing ? setEraserRadius : setBrushRadius}
+                              />
+                              {/* Text Settings (only show when adding text) */}
+                              {isAddingText && (
+                                <div className="text-controls-compact">
+                                  <div className="text-row">
+                                    <div className="text-size">
+                                      <label>Size:</label>
                                       <input
                                         type="range"
                                         min="12"
@@ -1953,458 +2058,69 @@ const ManualChat = () => {
                                             fontSize: Number.parseInt(e.target.value),
                                           }))
                                         }
-                                        className="chat-screen-range-input"
                                       />
-                                      <span className="chat-screen-size-badge">{textSettings.fontSize}px</span>
+                                      <span>{textSettings.fontSize}px</span>
                                     </div>
-                                    <div className="chat-screen-control-group">
-                                      <label className="chat-screen-label">Text Color:</label>
+                                    <div className="text-color">
+                                      <label>Color:</label>
                                       <input
                                         type="color"
                                         value={textSettings.color}
                                         onChange={(e) =>
                                           setTextSettings((prev) => ({ ...prev, color: e.target.value }))
                                         }
-                                        className="chat-screen-color-input"
                                       />
                                     </div>
-                                    <div className="chat-screen-control-group">
-                                      <label className="chat-screen-label">Background:</label>
-                                      <input
-                                        type="color"
-                                        value={
-                                          textSettings.backgroundColor === "transparent"
-                                            ? "#ffffff"
-                                            : textSettings.backgroundColor
-                                        }
-                                        onChange={(e) =>
-                                          setTextSettings((prev) => ({ ...prev, backgroundColor: e.target.value }))
-                                        }
-                                        className="chat-screen-color-input"
-                                      />
-                                      <button
-                                        className="btn btn-sm btn-outline-secondary ms-1"
-                                        onClick={() =>
-                                          setTextSettings((prev) => ({ ...prev, backgroundColor: "transparent" }))
-                                        }
-                                        title="Transparent background"
-                                      >
-                                        Clear
-                                      </button>
-                                    </div>
-                                    <div className="chat-screen-control-group">
-                                      <label className="chat-screen-label">Font:</label>
+                                    <div className="text-font">
+                                      <label>Font:</label>
                                       <select
                                         value={textSettings.fontFamily}
                                         onChange={(e) =>
                                           setTextSettings((prev) => ({ ...prev, fontFamily: e.target.value }))
                                         }
-                                        className="form-select form-select-sm"
                                       >
                                         <option value="Arial">Arial</option>
                                         <option value="Helvetica">Helvetica</option>
-                                        <option value="Times New Roman">Times New Roman</option>
-                                        <option value="Courier New">Courier New</option>
-                                        <option value="Georgia">Georgia</option>
-                                        <option value="Impact">Impact</option>
-                                        <option value="Comic Sans MS">Comic Sans MS</option>
+                                        <option value="Times New Roman">Times</option>
+                                        <option value="Courier New">Courier</option>
                                       </select>
                                     </div>
-                                    {/* Text Formatting */}
-                                    <div className="chat-screen-control-group">
-                                      <label className="chat-screen-label">Format:</label>
-                                      <div className="chat-screen-format-buttons">
-                                        <button
-                                          className={`chat-screen-format-btn ${textSettings.fontWeight === "bold" ? "active" : ""}`}
-                                          onClick={() =>
-                                            setTextSettings((prev) => ({
-                                              ...prev,
-                                              fontWeight: prev.fontWeight === "bold" ? "normal" : "bold",
-                                            }))
-                                          }
-                                          title="Bold"
-                                        >
-                                          <MdFormatBold />
-                                        </button>
-                                        <button
-                                          className={`chat-screen-format-btn ${textSettings.fontStyle === "italic" ? "active" : ""}`}
-                                          onClick={() =>
-                                            setTextSettings((prev) => ({
-                                              ...prev,
-                                              fontStyle: prev.fontStyle === "italic" ? "normal" : "italic",
-                                            }))
-                                          }
-                                          title="Italic"
-                                        >
-                                          <MdFormatItalic />
-                                        </button>
-                                        <button
-                                          className={`chat-screen-format-btn ${textSettings.textDecoration === "underline" ? "active" : ""}`}
-                                          onClick={() =>
-                                            setTextSettings((prev) => ({
-                                              ...prev,
-                                              textDecoration:
-                                                prev.textDecoration === "underline" ? "none" : "underline",
-                                            }))
-                                          }
-                                          title="Underline"
-                                        >
-                                          <MdFormatUnderlined />
-                                        </button>
-                                      </div>
-                                    </div>
-                                    {/* Text Alignment */}
-                                    <div className="chat-screen-control-group">
-                                      <label className="chat-screen-label">Align:</label>
-                                      <div className="chat-screen-align-buttons">
-                                        <button
-                                          className={`chat-screen-align-btn ${textSettings.textAlign === "left" ? "active" : ""}`}
-                                          onClick={() => setTextSettings((prev) => ({ ...prev, textAlign: "left" }))}
-                                          title="Align Left"
-                                        >
-                                          <MdFormatAlignLeft />
-                                        </button>
-                                        <button
-                                          className={`chat-screen-align-btn ${textSettings.textAlign === "center" ? "active" : ""}`}
-                                          onClick={() => setTextSettings((prev) => ({ ...prev, textAlign: "center" }))}
-                                          title="Align Center"
-                                        >
-                                          <MdFormatAlignCenter />
-                                        </button>
-                                        <button
-                                          className={`chat-screen-align-btn ${textSettings.textAlign === "right" ? "active" : ""}`}
-                                          onClick={() => setTextSettings((prev) => ({ ...prev, textAlign: "right" }))}
-                                          title="Align Right"
-                                        >
-                                          <MdFormatAlignRight />
-                                        </button>
-                                      </div>
-                                    </div>
                                   </div>
                                 </div>
-                                <div className="chat-screen-controls-right">
-                                  {/* Image Editor Toggle */}
-                                  <button
-                                    className={`chat-screen-button ${showImageEditor ? "chat-screen-button-success" : "chat-screen-button-secondary"}`}
-                                    onClick={() => setShowImageEditor(!showImageEditor)}
-                                  >
-                                    <MdFilter className="chat-screen-icon" />
-                                    <span className="chat-screen-button-text">
-                                      {showImageEditor ? "Hide Editor" : "Image Editor"}
-                                    </span>
-                                  </button>
-                                  <button
-                                    className={`chat-screen-button ${isAddingText ? "chat-screen-button-success" : "chat-screen-button-primary"}`}
-                                    onClick={() => setIsAddingText(!isAddingText)}
-                                  >
-                                    <MdPinEnd className="chat-screen-icon" />
-                                    <span className="chat-screen-button-text">
-                                      {isAddingText ? "Adding Text..." : "Add Text"}
-                                    </span>
-                                  </button>
-                                  <button
-                                    className="chat-screen-button chat-screen-button-warning"
-                                    onClick={handleUndo}
-                                  >
-                                    <MdUndo className="chat-screen-icon" />
-                                    <span className="chat-screen-button-text">Undo</span>
-                                  </button>
-                                  {/* <button
-                                    className="chat-screen-button chat-screen-button-info"
-                                    onClick={handleRedo}
-                                    disabled={historyIndex >= textHistory.length - 1}
-                                  >
-                                    <MdRedo className="chat-screen-icon" />
-                                    <span className="chat-screen-button-text">Redo</span>
-                                  </button> */}
-                                  <button
-                                    className="chat-screen-button chat-screen-button-danger"
-                                    onClick={handleClear}
-                                  >
-                                    <MdClear className="chat-screen-icon" />
-                                    <span className="chat-screen-button-text">Clear All</span>
-                                  </button>
-                                </div>
+                              )}
+                              {/* Zoom Controls */}
+                              <div className="zoom-controls">
+                                <span>Zoom: {Math.round(zoomLevel * 100)}%</span>
+                                <button onClick={() => handleZoom(1, 0, 0)} title="Zoom In">
+                                  <MdZoomIn />
+                                </button>
+                                <button onClick={() => handleZoom(-1, 0, 0)} title="Zoom Out">
+                                  <MdZoomOut />
+                                </button>
+                                <span className="zoom-hint">Scroll to zoom, Ctrl+drag to pan</span>
                               </div>
-                              {/* Image Editor Panel */}
-                              {showImageEditor && (
-                                <div className="chat-screen-image-editor-panel">
-                                  <h6 className="mb-3">
-                                    <MdFilter className="me-2" />
-                                    Image Editor
-                                  </h6>
-                                  <div className="row">
-                                    <div className="col-md-6">
-                                      <h6>Filters</h6>
-                                      <div className="chat-screen-filter-controls">
-                                        <div className="chat-screen-filter-item">
-                                          <label>Brightness: {imageFilters.brightness}%</label>
-                                          <input
-                                            type="range"
-                                            min="0"
-                                            max="200"
-                                            value={imageFilters.brightness}
-                                            onChange={(e) =>
-                                              setImageFilters((prev) => ({
-                                                ...prev,
-                                                brightness: Number.parseInt(e.target.value),
-                                              }))
-                                            }
-                                            className="form-range"
-                                          />
-                                        </div>
-                                        <div className="chat-screen-filter-item">
-                                          <label>Contrast: {imageFilters.contrast}%</label>
-                                          <input
-                                            type="range"
-                                            min="0"
-                                            max="200"
-                                            value={imageFilters.contrast}
-                                            onChange={(e) =>
-                                              setImageFilters((prev) => ({
-                                                ...prev,
-                                                contrast: Number.parseInt(e.target.value),
-                                              }))
-                                            }
-                                            className="form-range"
-                                          />
-                                        </div>
-                                        <div className="chat-screen-filter-item">
-                                          <label>Saturation: {imageFilters.saturation}%</label>
-                                          <input
-                                            type="range"
-                                            min="0"
-                                            max="200"
-                                            value={imageFilters.saturation}
-                                            onChange={(e) =>
-                                              setImageFilters((prev) => ({
-                                                ...prev,
-                                                saturation: Number.parseInt(e.target.value),
-                                              }))
-                                            }
-                                            className="form-range"
-                                          />
-                                        </div>
-                                        <div className="chat-screen-filter-item">
-                                          <label>Blur: {imageFilters.blur}px</label>
-                                          <input
-                                            type="range"
-                                            min="0"
-                                            max="10"
-                                            value={imageFilters.blur}
-                                            onChange={(e) =>
-                                              setImageFilters((prev) => ({
-                                                ...prev,
-                                                blur: Number.parseInt(e.target.value),
-                                              }))
-                                            }
-                                            className="form-range"
-                                          />
-                                        </div>
-                                        <div className="chat-screen-filter-item">
-                                          <label>Sepia: {imageFilters.sepia}%</label>
-                                          <input
-                                            type="range"
-                                            min="0"
-                                            max="100"
-                                            value={imageFilters.sepia}
-                                            onChange={(e) =>
-                                              setImageFilters((prev) => ({
-                                                ...prev,
-                                                sepia: Number.parseInt(e.target.value),
-                                              }))
-                                            }
-                                            className="form-range"
-                                          />
-                                        </div>
-                                        <div className="chat-screen-filter-item">
-                                          <label>Grayscale: {imageFilters.grayscale}%</label>
-                                          <input
-                                            type="range"
-                                            min="0"
-                                            max="100"
-                                            value={imageFilters.grayscale}
-                                            onChange={(e) =>
-                                              setImageFilters((prev) => ({
-                                                ...prev,
-                                                grayscale: Number.parseInt(e.target.value),
-                                              }))
-                                            }
-                                            className="form-range"
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="col-md-6">
-                                      <h6>Transform</h6>
-                                      <div className="chat-screen-transform-controls">
-                                        <div className="chat-screen-transform-item">
-                                          <label>Rotation: {imageTransform.rotation}°</label>
-                                          <input
-                                            type="range"
-                                            min="0"
-                                            max="360"
-                                            value={imageTransform.rotation}
-                                            onChange={(e) =>
-                                              setImageTransform((prev) => ({
-                                                ...prev,
-                                                rotation: Number.parseInt(e.target.value),
-                                              }))
-                                            }
-                                            className="form-range"
-                                          />
-                                        </div>
-                                        <div className="chat-screen-transform-buttons">
-                                          <button
-                                            className="btn btn-sm btn-outline-primary"
-                                            onClick={() =>
-                                              setImageTransform((prev) => ({
-                                                ...prev,
-                                                rotation: (prev.rotation + 90) % 360,
-                                              }))
-                                            }
-                                          >
-                                            <MdRotateRight className="me-1" />
-                                            Rotate 90°
-                                          </button>
-                                          <button
-                                            className="btn btn-sm btn-outline-secondary"
-                                            onClick={() =>
-                                              setImageTransform((prev) => ({ ...prev, flipX: !prev.flipX }))
-                                            }
-                                          >
-                                            Flip X
-                                          </button>
-                                          <button
-                                            className="btn btn-sm btn-outline-secondary"
-                                            onClick={() =>
-                                              setImageTransform((prev) => ({ ...prev, flipY: !prev.flipY }))
-                                            }
-                                          >
-                                            Flip Y
-                                          </button>
-                                        </div>
-                                      </div>
-                                      <div className="mt-3">
-                                        <button className="btn btn-sm btn-outline-danger" onClick={resetImageFilters}>
-                                          Reset All
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                              {/* Text Elements List */}
-                              {textElements.length > 0 && (
-                                <div className="chat-screen-text-elements-list">
-                                  <h6 className="mb-2">
-                                    <MdLayers className="me-2" />
-                                    Text Elements ({textElements.length})
-                                  </h6>
-                                  <div className="chat-screen-text-elements-grid">
-                                    {textElements.map((element) => (
-                                      <div
-                                        key={element.id}
-                                        className={`chat-screen-text-element-item ${selectedTextId === element.id ? "selected" : ""}`}
-                                        onClick={(e) => {
-                                          e.stopPropagation() // Prevent wrapper click from unselecting
-                                          setSelectedTextId(element.id)
-                                        }}
-                                      >
-                                        <div className="chat-screen-text-element-preview">
-                                          <span
-                                            className="text-truncate"
-                                            style={{
-                                              maxWidth: "120px",
-                                              fontSize: "12px",
-                                              fontFamily: element.fontFamily,
-                                              fontWeight: element.fontWeight,
-                                              fontStyle: element.fontStyle,
-                                              color: element.color,
-                                            }}
-                                          >
-                                            {element.text}
-                                          </span>
-                                        </div>
-                                        <div className="chat-screen-text-element-actions">
-                                          <button
-                                            className="btn btn-sm btn-outline-primary"
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              handleTextDoubleClick(element.id)
-                                            }}
-                                            title="Edit text"
-                                          >
-                                            <MdEdit size={12} />
-                                          </button>
-                                          <button
-                                            className="btn btn-sm btn-outline-secondary"
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              duplicateTextElement(element.id)
-                                            }}
-                                            title="Duplicate"
-                                          >
-                                            <MdContentCopy size={12} />
-                                          </button>
-                                          <button
-                                            className="btn btn-sm btn-outline-danger"
-                                            onClick={(e) => {
-                                              e.stopPropagation()
-                                              deleteTextElement(element.id)
-                                            }}
-                                            title="Delete"
-                                          >
-                                            <MdDelete size={12} />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                              {/* Text Editing Modal */}
-                              {isEditingText && (
-                                <div className="chat-screen-text-edit-overlay">
-                                  <div className="chat-screen-text-edit-modal">
-                                    <h6>Edit Text</h6>
-                                    <input
-                                      ref={editTextInputRef}
-                                      type="text"
-                                      value={editingTextValue}
-                                      onChange={(e) => setEditingTextValue(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          saveTextEdit()
-                                        } else if (e.key === "Escape") {
-                                          cancelTextEdit()
-                                        }
-                                      }}
-                                      className="form-control mb-2"
-                                      placeholder="Enter text..."
-                                    />
-                                    <div className="d-flex gap-2">
-                                      <button className="btn btn-sm btn-primary" onClick={saveTextEdit}>
-                                        Save
-                                      </button>
-                                      <button className="btn btn-sm btn-secondary" onClick={cancelTextEdit}>
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           )}
                           <div
                             className="chat-screen-canvas-wrapper"
-                            style={{ position: "relative" }}
+                            style={{ position: "relative", overflow: "hidden" }}
                             onClick={handleCanvasWrapperClick}
+                            onWheel={handleWheel}
+                            onMouseDown={handleMouseDown}
+                            onMouseMove={handleMouseMove}
+                            onMouseUp={handleMouseUp}
+                            ref={containerRef}
                           >
                             {isAnnotating ? (
-                              <div className="chat-screen-canvas-container" style={{ position: "relative" }}>
-                                {/* Hidden Image Canvas for Filters */}
-                                <canvas ref={imageCanvasRef} style={{ display: "none" }} onLoad={applyImageFilters} />
+                              <div
+                                className="chat-screen-canvas-container"
+                                style={{
+                                  position: "relative",
+                                  transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+                                  transformOrigin: "0 0",
+                                  cursor: isPanning ? "grabbing" : isErasing ? "crosshair" : "default",
+                                }}
+                              >
                                 {/* Drawing Canvas */}
                                 <CanvasDraw
                                   ref={canvasRef}
@@ -2413,23 +2129,42 @@ const ManualChat = () => {
                                   canvasHeight={canvasHeight}
                                   loadTimeOffset={10}
                                   brushRadius={brushRadius}
-                                  brushColor={brushColor}
+                                  brushColor={isErasing ? "#FFFFFF" : brushColor}
                                   lazyRadius={0}
                                   className="chat-screen-canvas"
+                                  disabled={["rectangle", "circle", "arrow", "line"].includes(drawingTool) || isErasing}
+                                />
+                                {/* Shape Canvas */}
+                                <canvas
+                                  ref={shapeCanvasRef}
+                                  width={canvasWidth}
+                                  height={canvasHeight}
                                   style={{
-                                    filter: `
-                                      brightness(${imageFilters.brightness}%)
-                                      contrast(${imageFilters.contrast}%)
-                                      saturate(${imageFilters.saturation}%)
-                                      blur(${imageFilters.blur}px)
-                                      sepia(${imageFilters.sepia}%)
-                                      grayscale(${imageFilters.grayscale}%)
-                                    `,
-                                    transform: `
-                                      rotate(${imageTransform.rotation}deg)
-                                      scaleX(${imageTransform.scaleX * (imageTransform.flipX ? -1 : 1)})
-                                      scaleY(${imageTransform.scaleY * (imageTransform.flipY ? -1 : 1)})
-                                    `,
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    pointerEvents:
+                                      ["rectangle", "circle", "arrow", "line"].includes(drawingTool) || isErasing
+                                        ? "auto"
+                                        : "none",
+                                    zIndex: 5,
+                                  }}
+                                  onMouseDown={handleShapeMouseDown}
+                                  onMouseMove={handleShapeMouseMove}
+                                  onMouseUp={handleShapeMouseUp}
+                                />
+                                {/* Eraser Canvas */}
+                                <canvas
+                                  ref={eraserCanvasRef}
+                                  width={canvasWidth}
+                                  height={canvasHeight}
+                                  style={{
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    pointerEvents: isErasing ? "auto" : "none",
+                                    zIndex: 6,
+                                    cursor: isErasing ? "crosshair" : "default",
                                   }}
                                 />
                                 {/* Text Overlay Canvas */}
@@ -2484,8 +2219,8 @@ const ManualChat = () => {
                                     onMouseDown={(e) => handleTextMouseDown(e, element.id)}
                                     onDoubleClick={() => handleTextDoubleClick(element.id)}
                                     onClick={(e) => {
-                                      e.stopPropagation() // Prevent wrapper click from unselecting
-                                      setSelectedTextId(element.id) // Ensure it's selected on single click
+                                      e.stopPropagation()
+                                      setSelectedTextId(element.id)
                                     }}
                                     className={`text-element ${selectedTextId === element.id ? "selected" : ""}`}
                                   >
@@ -2500,7 +2235,7 @@ const ManualChat = () => {
                                           }}
                                           title="Edit text"
                                         >
-                                          ✏️
+                                          {'✏️'}
                                         </button>
                                         <button
                                           className="text-control-btn delete-btn"
@@ -2510,7 +2245,7 @@ const ManualChat = () => {
                                           }}
                                           title="Delete text"
                                         >
-                                          🗑️
+                                          {'🗑️'}
                                         </button>
                                       </div>
                                     )}
@@ -2548,7 +2283,7 @@ const ManualChat = () => {
                                           setIsAddingText(false)
                                         }
                                       }}
-                                      onClick={(e) => e.stopPropagation()} // Prevent wrapper click from unselecting when clicking on the input itself
+                                      onClick={(e) => e.stopPropagation()}
                                       className="form-control form-control-sm"
                                       style={{
                                         fontSize: `${textSettings.fontSize}px`,
@@ -2572,24 +2307,44 @@ const ManualChat = () => {
                                   alt={selectedImage?.name}
                                   className="chat-screen-preview-image"
                                   style={{
-                                    filter: `
-                                      brightness(${imageFilters.brightness}%)
-                                      contrast(${imageFilters.contrast}%)
-                                      saturate(${imageFilters.saturation}%)
-                                      blur(${imageFilters.blur}px)
-                                      sepia(${imageFilters.sepia}%)
-                                      grayscale(${imageFilters.grayscale}%)
-                                    `,
-                                    transform: `
-                                      rotate(${imageTransform.rotation}deg)
-                                      scaleX(${imageTransform.scaleX * (imageTransform.flipX ? -1 : 1)})
-                                      scaleY(${imageTransform.scaleY * (imageTransform.flipY ? -1 : 1)})
-                                    `,
+                                    transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
+                                    transformOrigin: "0 0",
                                   }}
                                 />
                               </div>
                             )}
                           </div>
+                          {/* Text Editing Modal */}
+                          {isEditingText && (
+                            <div className="chat-screen-text-edit-overlay">
+                              <div className="chat-screen-text-edit-modal">
+                                <h6>Edit Text</h6>
+                                <input
+                                  ref={editTextInputRef}
+                                  type="text"
+                                  value={editingTextValue}
+                                  onChange={(e) => setEditingTextValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      saveTextEdit()
+                                    } else if (e.key === "Escape") {
+                                      cancelTextEdit()
+                                    }
+                                  }}
+                                  className="form-control mb-2"
+                                  placeholder="Enter text..."
+                                />
+                                <div className="d-flex gap-2">
+                                  <button className="btn btn-sm btn-primary" onClick={saveTextEdit}>
+                                    Save
+                                  </button>
+                                  <button className="btn btn-sm btn-secondary" onClick={cancelTextEdit}>
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </Modal.Body>
@@ -2640,7 +2395,7 @@ const ManualChat = () => {
                           <MdReply className="chatn-reply-icon" />
                           <span className="chatn-reply-label">Replying to {replyingTo.senderName}</span>
                         </div>
-                        <div className="chatn-reply-preview">{replyingTo.file ? "📷 Image" : replyingTo.text}</div>
+                        <div className="chatn-reply-preview">{replyingTo.file ? "📷 Image" : replyingTo.audio ? "🎤 Voice Note" : replyingTo.text}</div>
                         <div className="chatn-reply-original-time">
                           {new Date(replyingTo.originalTimestamp).toLocaleTimeString("en-US", {
                             hour: "2-digit",
@@ -2659,43 +2414,68 @@ const ManualChat = () => {
                       id="chatnFileUpload"
                       onChange={handleFileChange}
                       style={{ display: "none" }}
-                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
+                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" || isRecording || recordedAudioUrl}
                       accept="image/*"
                     />
                     <label
                       htmlFor="chatnFileUpload"
-                      className={`chatn-attachment-button ${isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" ? "disabled" : ""
-                        }`}
+                      className={`chatn-attachment-button ${
+                        isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" || isRecording || recordedAudioUrl ? "disabled" : ""
+                      }`}
                     >
                       <MdAttachment />
                     </label>
-                    {/* <input
-                      type="file"
-                      id="voiceUpload"
-                      onChange={handleFileChange}
-                      style={{ display: "none" }}
-                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
-                      accept="image/*"
-                    />
-                    <label
-                      htmlFor="voiceUpload"
-                      className={`chatn-attachment-button ${isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" ? "disabled" : ""
+                    {/* Voice Note Controls */}
+                    {!recordedAudioUrl ? (
+                      <button
+                        type="button"
+                        className={`chatn-attachment-button ${
+                          isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" ? "disabled" : ""
                         }`}
-                    >
-                      <Mic />
-                    </label> */}
+                        onClick={isRecording ? stopRecording : startRecording}
+                        disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
+                      >
+                        {isRecording ? <StopCircle /> : <Mic />}
+                        {isRecording && (
+                          <span className="recording-duration">
+                            {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:
+                            {(recordingDuration % 60).toString().padStart(2, '0')}
+                          </span>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="recorded-audio-preview">
+                        <audio src={recordedAudioUrl} controls className="audio-player-inline" />
+                        <button
+                          type="button"
+                          className="chatn-send-audio-button"
+                          onClick={sendRecordedAudio}
+                          disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
+                        >
+                          <Send size={18} />
+                        </button>
+                        <button
+                          type="button"
+                          className="chatn-cancel-audio-button"
+                          onClick={cancelRecordedAudio}
+                          disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    )}
                     <input
                       type="text"
                       className="chatn-text-input"
                       placeholder={replyingTo ? `Reply to ${replyingTo.senderName}...` : "Type your message..."}
                       value={message}
-                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
+                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" || isRecording || recordedAudioUrl}
                       onChange={(e) => setMessage(e.target.value)}
                     />
                     <button
                       type="submit"
                       className="chatn-send-button"
-                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" || !message.trim()}
+                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" || !message.trim() || isRecording || recordedAudioUrl}
                     >
                       <MdSend />
                     </button>
@@ -2729,8 +2509,7 @@ const ManualChat = () => {
           )}
         </div>
       </div>
-    </div>
+  </div>
   )
 }
-
 export default ManualChat
