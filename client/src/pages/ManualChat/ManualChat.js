@@ -31,7 +31,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { Modal, Dropdown } from "react-bootstrap"
 import "bootstrap/dist/css/bootstrap.min.css"
 import CanvasDraw from "react-canvas-draw"
-import { Mic, Mic2, Pencil } from "lucide-react"
+import { Pencil } from "lucide-react"
 
 const ENDPOINT = "http://localhost:5654/"
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -2478,22 +2478,6 @@ const ManualChat = () => {
                       }`}
                     >
                       <MdAttachment />
-                    </label>
-                    <input
-                      type="file"
-                      id="chatnFileUpload"
-                      onChange={handleFileChange}
-                      style={{ display: "none" }}
-                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
-                      accept="image/*"
-                    />
-                    <label
-                      htmlFor="chatnFileUpload"
-                      className={`chatn-attachment-button ${
-                        isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" ? "disabled" : ""
-                      }`}
-                    >
-                      <Mic />
                     </label>
                     <input
                       type="text"
