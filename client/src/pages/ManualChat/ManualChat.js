@@ -31,8 +31,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { Modal, Dropdown } from "react-bootstrap"
 import "bootstrap/dist/css/bootstrap.min.css"
 import CanvasDraw from "react-canvas-draw"
-import { Mic, StopCircle, Send, X } from "lucide-react" // Import new icons for recording
-import { Pencil } from "lucide-react"
+import { Mic, Mic2, Pencil } from "lucide-react"
 
 const ENDPOINT = "http://localhost:5654/"
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -68,15 +67,18 @@ const ManualChat = () => {
   const [groupMembers, setGroupMembers] = useState([])
   const [isChatEnded, setIsChatEnded] = useState(false)
   const [downloadUrl, setDownloadUrl] = useState(null)
+
   // Enhanced Reply functionality states
   const [replyingTo, setReplyingTo] = useState(null)
   const [showReplyOptions, setShowReplyOptions] = useState({})
+
   // Enhanced Canvas annotation states
   const [brushColor, setBrushColor] = useState("#ff0000")
   const [brushRadius, setBrushRadius] = useState(2)
   const [isAnnotating, setIsAnnotating] = useState(false)
   const [isErasing, setIsErasing] = useState(false)
   const canvasRef = useRef()
+
   // Enhanced Text Annotation States
   const [textElements, setTextElements] = useState([])
   const [isAddingText, setIsAddingText] = useState(false)
@@ -103,22 +105,27 @@ const ManualChat = () => {
   const [editingTextValue, setEditingTextValue] = useState("")
   const [groupName, setGroupName] = useState("")
   const [isEditingGroupName, setIsEditingGroupName] = useState(false)
+
   // Enhanced Drawing Tool States
   const [drawingTool, setDrawingTool] = useState("brush") // brush, rectangle, circle, arrow, line, eraser
   const [shapes, setShapes] = useState([])
   const [isDrawingShape, setIsDrawingShape] = useState(false)
   const [shapeStart, setShapeStart] = useState(null)
   const [currentShape, setCurrentShape] = useState(null)
+
   // Enhanced Eraser States
   const [eraserRadius, setEraserRadius] = useState(10)
   const [isErasingShape, setIsErasingShape] = useState(false)
+
   // Zoom functionality states
   const [zoomLevel, setZoomLevel] = useState(1)
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
   const [isPanning, setIsPanning] = useState(false)
   const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 })
+
   // Add participants mapping for better sender resolution
   const [participantsMap, setParticipantsMap] = useState(new Map())
+
   const navigate = useNavigate()
   const location = useLocation()
   const textCanvasRef = useRef()
@@ -128,20 +135,14 @@ const ManualChat = () => {
   const shapeCanvasRef = useRef()
   const eraserCanvasRef = useRef()
 
-  // Voice note recording states
-  const [isRecording, setIsRecording] = useState(false)
-  const [recordedAudioUrl, setRecordedAudioUrl] = useState(null)
-  const [audioChunks, setAudioChunks] = useState([])
-  const mediaRecorderRef = useRef(null)
-  const [recordingDuration, setRecordingDuration] = useState(0)
-  const recordingIntervalRef = useRef(null)
-
   // User data from session storage
   const userData = useMemo(() => {
     const data = GetData("user")
     return data ? JSON.parse(data) : null
   }, [])
+
   const socket = useSocket()
+
   // Enhanced function to build participants map
   const buildParticipantsMap = useCallback(
     (chatData) => {
@@ -154,6 +155,7 @@ const ManualChat = () => {
           isCurrentUser: true,
         })
       }
+
       // Add chat user
       if (chatData?.userId) {
         map.set(chatData.userId._id, {
@@ -162,6 +164,7 @@ const ManualChat = () => {
           isCurrentUser: chatData.userId._id === userData?._id,
         })
       }
+
       // Add providers
       if (chatData?.providerIds && Array.isArray(chatData.providerIds)) {
         chatData.providerIds.forEach((provider) => {
@@ -172,11 +175,13 @@ const ManualChat = () => {
           })
         })
       }
+
       setParticipantsMap(map)
       return map
     },
     [userData],
   )
+
   // Enhanced getSenderInfo function
   const getSenderInfo = useCallback(
     (senderId) => {
@@ -184,10 +189,12 @@ const ManualChat = () => {
       if (participantsMap.has(senderId)) {
         return participantsMap.get(senderId)
       }
+
       // Fallback to current user check
       if (senderId === userData?._id) {
         return { name: "You", role: userData?.role, isCurrentUser: true }
       }
+
       // Fallback to selectedChat check
       if (selectedChat?.userId?._id === senderId) {
         return {
@@ -196,6 +203,7 @@ const ManualChat = () => {
           isCurrentUser: false,
         }
       }
+
       // Check providers in selectedChat
       const provider = selectedChat?.providerIds?.find((p) => p._id === senderId)
       if (provider) {
@@ -205,6 +213,7 @@ const ManualChat = () => {
           isCurrentUser: false,
         }
       }
+
       // Last resort - try to find in messages for any stored sender info
       const messageWithSender = messages.find(
         (msg) => (msg.sender === senderId || msg.senderId === senderId) && msg.senderName,
@@ -216,10 +225,12 @@ const ManualChat = () => {
           isCurrentUser: false,
         }
       }
+
       return { name: "Unknown User", role: "unknown", isCurrentUser: false }
     },
     [participantsMap, userData, selectedChat, messages],
   )
+
   // Enhanced Reply functionality functions
   const handleReplyClick = useCallback(
     (message, messageIndex) => {
@@ -235,15 +246,18 @@ const ManualChat = () => {
     },
     [getSenderInfo],
   )
+
   const cancelReply = useCallback(() => {
     setReplyingTo(null)
   }, [])
+
   const toggleReplyOptions = useCallback((messageIndex) => {
     setShowReplyOptions((prev) => ({
       ...prev,
       [messageIndex]: !prev[messageIndex],
     }))
   }, [])
+
   // Enhanced Text Management Functions
   const addTextToHistory = useCallback(
     (elements) => {
@@ -254,10 +268,13 @@ const ManualChat = () => {
     },
     [textHistory, historyIndex],
   )
+
   const generateTextId = () => `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
   const addTextElement = useCallback(
     (x, y, text) => {
       if (!text.trim()) return
+
       const newElement = {
         id: generateTextId(),
         text: text.trim(),
@@ -275,6 +292,7 @@ const ManualChat = () => {
         zIndex: textElements.length + 1,
         rotation: 0,
       }
+
       const newElements = [...textElements, newElement]
       setTextElements(newElements)
       addTextToHistory(newElements)
@@ -282,16 +300,18 @@ const ManualChat = () => {
       setTextPosition(null)
       setIsAddingText(false)
     },
-    [textElements, textSettings, addTextToHistory, setTextInput, setTextPosition, setIsAddingText],
+    [textElements, textSettings, addTextToHistory],
   )
+
   const updateTextElement = useCallback(
     (id, updates) => {
       const newElements = textElements.map((el) => (el.id === id ? { ...el, ...updates } : el))
       setTextElements(newElements)
       addTextToHistory(newElements)
     },
-    [textElements, addTextToHistory, setTextElements],
+    [textElements, addTextToHistory],
   )
+
   const deleteTextElement = useCallback(
     (id) => {
       const newElements = textElements.filter((el) => el.id !== id)
@@ -299,12 +319,14 @@ const ManualChat = () => {
       addTextToHistory(newElements)
       setSelectedTextId(null)
     },
-    [textElements, addTextToHistory, setTextElements, setSelectedTextId],
+    [textElements, addTextToHistory],
   )
+
   const duplicateTextElement = useCallback(
     (id) => {
       const element = textElements.find((el) => el.id === id)
       if (!element) return
+
       const newElement = {
         ...element,
         id: generateTextId(),
@@ -312,12 +334,14 @@ const ManualChat = () => {
         y: element.y + 20,
         zIndex: textElements.length + 1,
       }
+
       const newElements = [...textElements, newElement]
       setTextElements(newElements)
       addTextToHistory(newElements)
     },
-    [textElements, addTextToHistory, setTextElements],
+    [textElements, addTextToHistory],
   )
+
   const undoTextAction = useCallback(() => {
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1)
@@ -326,13 +350,15 @@ const ManualChat = () => {
       setHistoryIndex(-1)
       setTextElements([])
     }
-  }, [historyIndex, textHistory, setHistoryIndex, setTextElements])
+  }, [historyIndex, textHistory])
+
   const redoTextAction = useCallback(() => {
     if (historyIndex < textHistory.length - 1) {
       setHistoryIndex(historyIndex + 1)
       setTextElements([...textHistory[historyIndex + 1]])
     }
-  }, [historyIndex, textHistory, setHistoryIndex, setTextElements])
+  }, [historyIndex, textHistory])
+
   // Enhanced Eraser Functions
   const checkShapeCollision = useCallback(
     (x, y, radius) => {
@@ -343,9 +369,11 @@ const ManualChat = () => {
             const rectRight = Math.max(shape.startX, shape.endX)
             const rectTop = Math.min(shape.startY, shape.endY)
             const rectBottom = Math.max(shape.startY, shape.endY)
+
             return (
               x + radius >= rectLeft && x - radius <= rectRight && y + radius >= rectTop && y - radius <= rectBottom
             )
+
           case "circle":
             const centerX = shape.startX
             const centerY = shape.startY
@@ -354,6 +382,7 @@ const ManualChat = () => {
             )
             const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2))
             return distance <= shapeRadius + radius
+
           case "line":
           case "arrow":
             // Distance from point to line segment
@@ -361,10 +390,12 @@ const ManualChat = () => {
             const B = y - shape.startY
             const C = shape.endX - shape.startX
             const D = shape.endY - shape.startY
+
             const dot = A * C + B * D
             const lenSq = C * C + D * D
             let param = -1
             if (lenSq !== 0) param = dot / lenSq
+
             let xx, yy
             if (param < 0) {
               xx = shape.startX
@@ -376,10 +407,12 @@ const ManualChat = () => {
               xx = shape.startX + param * C
               yy = shape.startY + param * D
             }
+
             const dx = x - xx
             const dy = y - yy
             const distanceToLine = Math.sqrt(dx * dx + dy * dy)
             return distanceToLine <= radius + shape.radius
+
           default:
             return false
         }
@@ -387,16 +420,20 @@ const ManualChat = () => {
     },
     [shapes],
   )
+
   const handleEraserMove = useCallback(
     (e) => {
       if (!isErasing || !isErasingShape) return
+
       const canvas = eraserCanvasRef.current
       if (!canvas) return
+
       const rect = canvas.getBoundingClientRect()
       const scaleX = canvas.width / rect.width
       const scaleY = canvas.height / rect.height
       const x = (e.clientX - rect.left) * scaleX
       const y = (e.clientY - rect.top) * scaleY
+
       // Check for shape collisions and remove them
       const collidingShapes = checkShapeCollision(x, y, eraserRadius)
       if (collidingShapes.length > 0) {
@@ -405,41 +442,48 @@ const ManualChat = () => {
         setShapes(newShapes)
       }
     },
-    [isErasing, isErasingShape, eraserRadius, checkShapeCollision, shapes, setShapes],
+    [isErasing, isErasingShape, eraserRadius, checkShapeCollision, shapes],
   )
+
   const handleEraserStart = useCallback(
     (e) => {
       if (!isErasing) return
       setIsErasingShape(true)
       handleEraserMove(e)
     },
-    [isErasing, handleEraserMove, setIsErasingShape],
+    [isErasing, handleEraserMove],
   )
+
   const handleEraserEnd = useCallback(() => {
     setIsErasingShape(false)
-  }, [setIsErasingShape])
+  }, [])
+
   // Zoom functionality
   const handleZoom = useCallback(
     (delta, mouseX, mouseY) => {
       const zoomFactor = delta > 0 ? 1.1 : 0.9
       const newZoom = Math.min(Math.max(zoomLevel * zoomFactor, 0.5), 3)
+
       if (newZoom !== zoomLevel) {
         const container = containerRef.current
         if (container) {
           const rect = container.getBoundingClientRect()
           const x = mouseX - rect.left
           const y = mouseY - rect.top
+
           const newPanOffset = {
             x: panOffset.x - x * (newZoom - zoomLevel),
             y: panOffset.y - y * (newZoom - zoomLevel),
           }
+
           setZoomLevel(newZoom)
           setPanOffset(newPanOffset)
         }
       }
     },
-    [zoomLevel, panOffset, setZoomLevel, setPanOffset],
+    [zoomLevel, panOffset],
   )
+
   const handleWheel = useCallback(
     (e) => {
       e.preventDefault()
@@ -447,22 +491,22 @@ const ManualChat = () => {
     },
     [handleZoom],
   )
+
   const resetZoom = useCallback(() => {
     setZoomLevel(1)
     setPanOffset({ x: 0, y: 0 })
-  }, [setZoomLevel, setPanOffset])
+  }, [])
+
   // Pan functionality
-  const handleMouseDown = useCallback(
-    (e) => {
-      if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
-        // Middle mouse or Ctrl+Left click
-        setIsPanning(true)
-        setLastPanPoint({ x: e.clientX, y: e.clientY })
-        e.preventDefault()
-      }
-    },
-    [setIsPanning, setLastPanPoint],
-  )
+  const handleMouseDown = useCallback((e) => {
+    if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+      // Middle mouse or Ctrl+Left click
+      setIsPanning(true)
+      setLastPanPoint({ x: e.clientX, y: e.clientY })
+      e.preventDefault()
+    }
+  }, [])
+
   const handleMouseMove = useCallback(
     (e) => {
       if (isPanning) {
@@ -475,17 +519,20 @@ const ManualChat = () => {
         setLastPanPoint({ x: e.clientX, y: e.clientY })
       }
     },
-    [isPanning, lastPanPoint, setPanOffset, setLastPanPoint],
+    [isPanning, lastPanPoint],
   )
+
   const handleMouseUp = useCallback(() => {
     setIsPanning(false)
-  }, [setIsPanning])
+  }, [])
+
   // Shape drawing functions
   const drawShape = useCallback((ctx, shape) => {
     ctx.strokeStyle = shape.color
     ctx.lineWidth = shape.radius
     ctx.lineCap = "round"
     ctx.lineJoin = "round"
+
     switch (shape.type) {
       case "rectangle":
         ctx.strokeRect(shape.startX, shape.startY, shape.endX - shape.startX, shape.endY - shape.startY)
@@ -523,30 +570,39 @@ const ManualChat = () => {
         break
     }
   }, [])
+
   const renderShapes = useCallback(() => {
     const canvas = shapeCanvasRef.current
     if (!canvas) return
+
     const ctx = canvas.getContext("2d")
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+
     shapes.forEach((shape) => {
       drawShape(ctx, shape)
     })
+
     if (currentShape) {
       drawShape(ctx, currentShape)
     }
   }, [shapes, currentShape, drawShape])
+
   const renderEraserCursor = useCallback(() => {
     const canvas = eraserCanvasRef.current
     if (!canvas || !isErasing) return
+
     const ctx = canvas.getContext("2d")
     ctx.clearRect(0, 0, canvas.width, canvas.height)
   }, [isErasing])
+
   useEffect(() => {
     renderShapes()
   }, [renderShapes])
+
   useEffect(() => {
     renderEraserCursor()
   }, [renderEraserCursor])
+
   // Enhanced Canvas Click Handler
   const handleCanvasClick = useCallback(
     (e) => {
@@ -561,8 +617,9 @@ const ManualChat = () => {
         e.stopPropagation()
       }
     },
-    [isAddingText, setTextPosition],
+    [isAddingText],
   )
+
   // Shape drawing handlers
   const handleShapeMouseDown = useCallback(
     (e) => {
@@ -570,6 +627,7 @@ const ManualChat = () => {
         handleEraserStart(e)
         return
       }
+
       if (["rectangle", "circle", "arrow", "line"].includes(drawingTool)) {
         const canvas = e.currentTarget
         const rect = canvas.getBoundingClientRect()
@@ -577,6 +635,7 @@ const ManualChat = () => {
         const scaleY = canvas.height / rect.height
         const x = (e.clientX - rect.left) * scaleX
         const y = (e.clientY - rect.top) * scaleY
+
         setIsDrawingShape(true)
         setShapeStart({ x, y })
         setCurrentShape({
@@ -590,23 +649,16 @@ const ManualChat = () => {
         })
       }
     },
-    [
-      drawingTool,
-      brushColor,
-      brushRadius,
-      isErasing,
-      handleEraserStart,
-      setIsDrawingShape,
-      setShapeStart,
-      setCurrentShape,
-    ],
+    [drawingTool, brushColor, brushRadius, isErasing, handleEraserStart],
   )
+
   const handleShapeMouseMove = useCallback(
     (e) => {
       if (isErasing && isErasingShape) {
         handleEraserMove(e)
         return
       }
+
       if (isDrawingShape && shapeStart) {
         const canvas = e.currentTarget
         const rect = canvas.getBoundingClientRect()
@@ -614,6 +666,7 @@ const ManualChat = () => {
         const scaleY = canvas.height / rect.height
         const x = (e.clientX - rect.left) * scaleX
         const y = (e.clientY - rect.top) * scaleY
+
         setCurrentShape((prev) => ({
           ...prev,
           endX: x,
@@ -621,81 +674,89 @@ const ManualChat = () => {
         }))
       }
     },
-    [isDrawingShape, shapeStart, isErasing, isErasingShape, handleEraserMove, setCurrentShape],
+    [isDrawingShape, shapeStart, isErasing, isErasingShape, handleEraserMove],
   )
+
   const handleShapeMouseUp = useCallback(() => {
     if (isErasing) {
       handleEraserEnd()
       return
     }
+
     if (isDrawingShape && currentShape) {
       setShapes((prev) => [...prev, currentShape])
       setCurrentShape(null)
       setIsDrawingShape(false)
       setShapeStart(null)
     }
-  }, [
-    isDrawingShape,
-    currentShape,
-    isErasing,
-    handleEraserEnd,
-    setShapes,
-    setCurrentShape,
-    setIsDrawingShape,
-    setShapeStart,
-  ])
+  }, [isDrawingShape, currentShape, isErasing, handleEraserEnd])
+
   // Enhanced Text Drag Handlers
   const handleTextMouseDown = useCallback(
     (e, textId) => {
       e.preventDefault()
       e.stopPropagation()
+
       const textElement = textElements.find((el) => el.id === textId)
       if (!textElement) return
+
       const canvas = textCanvasRef.current
       if (!canvas) return
+
       const rect = canvas.getBoundingClientRect()
       const scaleX = canvas.width / rect.width
       const scaleY = canvas.height / rect.height
       const canvasX = (e.clientX - rect.left) * scaleX
       const canvasY = (e.clientY - rect.top) * scaleY
+
       const offsetX = canvasX - textElement.x
       const offsetY = canvasY - textElement.y
+
       setDragOffset({ x: offsetX, y: offsetY })
       setSelectedTextId(textId)
       setIsDragging(true)
+
       const handleMouseMove = (moveEvent) => {
         if (!canvas) return
+
         const canvasRect = canvas.getBoundingClientRect()
         const moveScaleX = canvas.width / canvasRect.width
         const moveScaleY = canvas.height / canvasRect.height
         const newCanvasX = (moveEvent.clientX - canvasRect.left) * moveScaleX
         const newCanvasY = (moveEvent.clientY - canvasRect.top) * moveScaleY
+
         const newX = Math.max(0, Math.min(canvas.width - 100, newCanvasX - offsetX))
         const newY = Math.max(
           textElement.fontSize,
           Math.min(canvas.height - textElement.fontSize, newCanvasY - offsetY),
         )
+
         updateTextElement(textId, { x: newX, y: newY })
       }
+
       const handleMouseUp = () => {
         setIsDragging(false)
         document.removeEventListener("mousemove", handleMouseMove)
         document.removeEventListener("mouseup", handleMouseUp)
       }
+
       document.addEventListener("mousemove", handleMouseMove)
       document.addEventListener("mouseup", handleMouseUp)
     },
-    [textElements, updateTextElement, setSelectedTextId, setIsDragging, setDragOffset],
+    [textElements, updateTextElement],
   )
+
   // Text Double Click Handler for Editing
   const handleTextDoubleClick = useCallback(
     (textId) => {
       const element = textElements.find((el) => el.id === textId)
       if (!element) return
+
       setIsEditingText(true)
       setEditingTextId(textId)
       setEditingTextValue(element.text)
       setSelectedTextId(textId)
+
       setTimeout(() => {
         if (editTextInputRef.current) {
           editTextInputRef.current.focus()
@@ -703,8 +764,9 @@ const ManualChat = () => {
         }
       }, 100)
     },
-    [textElements, setIsEditingText, setEditingTextId, setEditingTextValue, setSelectedTextId],
+    [textElements],
   )
+
   // Save Text Edit
   const saveTextEdit = useCallback(() => {
     if (editingTextId && editingTextValue.trim()) {
@@ -713,46 +775,57 @@ const ManualChat = () => {
     setIsEditingText(false)
     setEditingTextId(null)
     setEditingTextValue("")
-  }, [editingTextId, editingTextValue, updateTextElement, setIsEditingText, setEditingTextId, setEditingTextValue])
+  }, [editingTextId, editingTextValue, updateTextElement])
+
   // Cancel Text Edit
   const cancelTextEdit = useCallback(() => {
     setIsEditingText(false)
     setEditingTextId(null)
     setEditingTextValue("")
-  }, [setIsEditingText, setEditingTextId, setEditingTextValue])
+  }, [])
+
   // Enhanced Send Annotation Function
   const handleSendAnnotation = async () => {
     setLoading(true)
     if (!canvasRef.current || !selectedImage?.content) return
+
     try {
       const drawingCanvas = canvasRef.current.canvas.drawing
       const textCanvas = textCanvasRef.current
       const shapeCanvas = shapeCanvasRef.current
+
       const width = drawingCanvas.width
       const height = drawingCanvas.height
+
       // Create merged canvas
       const mergedCanvas = document.createElement("canvas")
       mergedCanvas.width = width
       mergedCanvas.height = height
       const ctx = mergedCanvas.getContext("2d")
+
       const backgroundImg = new Image()
       backgroundImg.crossOrigin = "anonymous"
       backgroundImg.src = selectedImage.content
+
       backgroundImg.onload = () => {
         // Draw background image
         ctx.drawImage(backgroundImg, 0, 0, width, height)
+
         // Draw shapes
         if (shapeCanvas) {
           ctx.drawImage(shapeCanvas, 0, 0, width, height)
         }
+
         // Draw drawing annotations
         ctx.drawImage(drawingCanvas, 0, 0, width, height)
+
         // Draw text annotations
         textElements.forEach((element) => {
           ctx.font = `${element.fontStyle} ${element.fontWeight} ${element.fontSize}px ${element.fontFamily}`
           ctx.fillStyle = element.color
           ctx.textAlign = element.textAlign
           ctx.textBaseline = "top"
+
           let textX = element.x
           if (element.textAlign === "center") {
             textX += element.padding + (element.width || ctx.measureText(element.text).width) / 2
@@ -761,7 +834,9 @@ const ManualChat = () => {
           } else {
             textX += element.padding
           }
+
           const textY = element.y + element.padding
+
           if (element.backgroundColor !== "transparent") {
             const textWidth = ctx.measureText(element.text).width
             const textHeight = element.fontSize
@@ -769,20 +844,26 @@ const ManualChat = () => {
             ctx.fillRect(element.x, element.y, textWidth + element.padding * 2, textHeight + element.padding * 2)
             ctx.fillStyle = element.color
           }
+
           ctx.fillText(element.text, textX, textY)
+
           if (element.textDecoration === "underline") {
             const textWidth = ctx.measureText(element.text).width
             const underlineY = textY + element.fontSize + 2
             ctx.fillRect(textX, underlineY, textWidth, 1)
           }
         })
+
         const mergedDataUrl = mergedCanvas.toDataURL("image/png")
+
         const annotatedFile = {
           name: `annotated_${selectedImage?.name || "image.png"}`,
           type: "image/png",
           content: mergedDataUrl,
         }
+
         const currentUserInfo = getSenderInfo(userData._id)
+
         socket.emit("manual_file_upload", {
           room: currentRoomId,
           fileData: annotatedFile,
@@ -801,6 +882,7 @@ const ManualChat = () => {
             },
           }),
         })
+
         toast.success("Annotated image sent to chat!")
         setShowModal(false)
         setIsAnnotating(false)
@@ -810,6 +892,7 @@ const ManualChat = () => {
         setShapes([])
         if (replyingTo) cancelReply()
       }
+
       backgroundImg.onerror = () => {
         toast.error("Failed to load background image")
       }
@@ -820,6 +903,7 @@ const ManualChat = () => {
       setLoading(false)
     }
   }
+
   // Enhanced Clear Function
   const handleClear = () => {
     if (canvasRef.current) {
@@ -831,6 +915,7 @@ const ManualChat = () => {
     setShapes([])
     setCurrentShape(null)
   }
+
   // Enhanced Undo Function
   const handleUndo = () => {
     if (canvasRef.current) {
@@ -838,15 +923,18 @@ const ManualChat = () => {
     }
     undoTextAction()
   }
+
   // Handle click outside text elements to unselect
   const handleCanvasWrapperClick = useCallback(
     (e) => {
       if (isDragging) {
         return
       }
+
       const clickedOnTextElement = e.target.closest(".text-element")
       const clickedOnTextInput = e.target.closest(".form-control.form-control-sm")
       const clickedOnEditTextModalContent = e.target.closest(".chat-screen-text-edit-modal")
+
       if (!clickedOnTextElement && !clickedOnTextInput && !clickedOnEditTextModalContent) {
         setSelectedTextId(null)
         if (isAddingText && !textInput.trim()) {
@@ -855,8 +943,9 @@ const ManualChat = () => {
         }
       }
     },
-    [isDragging, isAddingText, textInput, setSelectedTextId, setTextPosition, setIsAddingText],
+    [isDragging, isAddingText, textInput],
   )
+
   // Check for mobile view
   useEffect(() => {
     const handleResize = () => {
@@ -866,6 +955,7 @@ const ManualChat = () => {
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
+
   // Handle image click
   const handleImageClick = (image) => {
     setSelectedImage(image)
@@ -878,6 +968,7 @@ const ManualChat = () => {
     setZoomLevel(1)
     setPanOffset({ x: 0, y: 0 })
   }
+
   // Handle modal close
   const handleCloseModal = () => {
     setShowModal(false)
@@ -892,9 +983,11 @@ const ManualChat = () => {
       canvasRef.current.clear()
     }
   }
+
   // Download URL effect
   useEffect(() => {
     if (!selectedImage?.content) return
+
     let url
     if (typeof selectedImage.content === "string" && selectedImage.content.startsWith("data:image")) {
       url = selectedImage.content
@@ -903,11 +996,14 @@ const ManualChat = () => {
       const blob = new Blob([byteArray], { type: selectedImage.type || "image/jpeg" })
       url = URL.createObjectURL(blob)
     }
+
     setDownloadUrl(url)
+
     return () => {
       if (url?.startsWith("blob:")) URL.revokeObjectURL(url)
     }
   }, [selectedImage])
+
   // Enhanced download function
   const handleBase64Download = () => {
     try {
@@ -916,21 +1012,26 @@ const ManualChat = () => {
         console.error("Invalid base64 data")
         return
       }
+
       const parts = base64Data.split(",")
       const byteString = atob(parts[1])
       const mimeString = parts[0].split(":")[1].split(";")[0]
+
       const ab = new ArrayBuffer(byteString.length)
       const ia = new Uint8Array(ab)
       for (let i = 0; i < byteString.length; i++) {
         ia[i] = byteString.charCodeAt(i)
       }
+
       const blob = new Blob([ia], { type: mimeString })
       const blobUrl = URL.createObjectURL(blob)
+
       const link = document.createElement("a")
       link.href = blobUrl
       link.download = "annotated-image.png"
       link.target = "_blank"
       document.body.appendChild(link)
+
       requestAnimationFrame(() => {
         link.click()
         document.body.removeChild(link)
@@ -940,8 +1041,10 @@ const ManualChat = () => {
       console.error("Error during base64 download:", error)
     }
   }
+
   const id = userData?._id || ""
   const role = userData?.role || ""
+
   // Handle mobile view chat selection
   const handleChatSelection = (chatId, chat) => {
     handleChatStart(chatId)
@@ -950,10 +1053,12 @@ const ManualChat = () => {
       setShowChatList(false)
     }
   }
+
   // Back to chat list (mobile)
   const handleBackToList = () => {
     setShowChatList(true)
   }
+
   const fetchWithRetry = async (url, retries = 3, delay = 1000) => {
     for (let i = 0; i < retries; i++) {
       try {
@@ -965,11 +1070,13 @@ const ManualChat = () => {
       }
     }
   }
+
   // Fetch group chat status
   useEffect(() => {
     const fetchGroupChatStatus = async () => {
       setLoading(true)
       if (!currentRoomId) return
+
       setIsFetchingChatStatus(true)
       try {
         const { data } = await fetchWithRetry(
@@ -986,10 +1093,12 @@ const ManualChat = () => {
         setIsFetchingChatStatus(false)
       }
     }
+
     if (currentRoomId) {
       fetchGroupChatStatus()
     }
-  }, [currentRoomId, userData])
+  }, [currentRoomId])
+
   // Fetch group chat history
   const fetchGroupChatHistory = useCallback(async () => {
     setLoading(true)
@@ -997,11 +1106,13 @@ const ManualChat = () => {
       toast.error("Please login first")
       return
     }
+
     try {
       const url =
         userData?.role === "provider"
           ? `${ENDPOINT}api/v1/get_manual_chat_by_providerId/${userData._id}`
           : `${ENDPOINT}api/v1/get_manual_chat_by_userId/${userData._id}`
+
       const { data } = await axios.get(url)
       setAllGroupChats(data.data.reverse())
     } catch (error) {
@@ -1010,14 +1121,18 @@ const ManualChat = () => {
       setLoading(false)
     }
   }, [userData])
+
   useEffect(() => {
     fetchGroupChatHistory()
   }, [fetchGroupChatHistory])
+
   // Get group members excluding current user
   const getGroupMembers = useCallback(
     (chat) => {
       if (!chat || !userData) return []
+
       const members = []
+
       // Add user if current user is not the user
       if (chat.userId && chat.userId._id !== userData._id) {
         members.push({
@@ -1027,6 +1142,7 @@ const ManualChat = () => {
           phoneNumber: chat.userId.PhoneNumber,
         })
       }
+
       // Add providers if current user is not in the provider list
       if (chat.providerIds && Array.isArray(chat.providerIds)) {
         chat.providerIds.forEach((provider) => {
@@ -1040,27 +1156,33 @@ const ManualChat = () => {
           }
         })
       }
+
       return members
     },
     [userData],
   )
+
   const handleCallMember = useCallback(async (member, selectedChat) => {
     setLoading(true)
     if (!userData) {
       toast.error("Please login first")
       return
     }
+
     const phoneNumber = member?.phoneNumber
     if (!phoneNumber) {
       toast.error(`No phone number available for ${member?.name || "this member"}`)
       return
     }
-    const cleanedNumber = phoneNumber.replace(/[^+\\d]/g, "")
+
+    const cleanedNumber = phoneNumber.replace(/[^+\d]/g, "")
+
     try {
       if (cleanedNumber) {
         const room = selectedChat?._id
         const callFrom = userData.mobileNumber || userData.PhoneNumber
         const callTo = member?.phoneNumber
+
         console.log("all detail =", room, callFrom, callTo)
         const res = await axios.post(`${ENDPOINT}api/v1/create_call_for_free`, { roomId: room, callFrom, callTo })
         toast.success(`Calling ${member.name}...`)
@@ -1073,34 +1195,41 @@ const ManualChat = () => {
       setLoading(false)
     }
   }, [])
+
   // Handle selecting a group chat from the sidebar
   const handleChatStart = useCallback(
     async (chatId) => {
       if (!chatId) return
+
       try {
         const { data } = await axios.get(`${ENDPOINT}api/v1/get-chat-by-id/${chatId}?role=${userData?.role}`)
         const chatData = data.data
+
         if (!chatData) {
           toast.error("Group chat not found")
           return
         }
+
         const userId = chatData?.userId?._id
         const providerIds = chatData?.providerIds?.map((provider) => provider._id) || []
+
         setChatData(chatData || {})
         setSelectedChat(chatData)
         setGroupName(chatData?.groupName || "Group Chat")
+
         // Build participants map first
         buildParticipantsMap(chatData)
+
         // Then set messages with enhanced sender info
         const enhancedMessages = (chatData.messages || []).map((msg) => {
           const senderInfo = getSenderInfo(msg.sender)
           return {
             ...msg,
-            senderId: msg.sender, // Ensure senderId is always present
             senderName: senderInfo.name,
             senderRole: senderInfo.role,
           }
         })
+
         setMessages(enhancedMessages)
         setSelectedUserId(userId)
         setSelectedProviderIds(providerIds)
@@ -1110,6 +1239,7 @@ const ManualChat = () => {
         setIsChatOnGoing(true)
         setGroupMembers(getGroupMembers(chatData))
         setIsChatEnded(chatData?.isGroupChatEnded)
+
         // Auto-join the room
         if (userData?.role === "provider") {
           socket.emit("join_manual_room", {
@@ -1132,6 +1262,7 @@ const ManualChat = () => {
     },
     [userData, socket, getGroupMembers, buildParticipantsMap, getSenderInfo],
   )
+
   const endGroupChat = useCallback(() => {
     try {
       socket.emit("manual_end_chat", {
@@ -1140,6 +1271,7 @@ const ManualChat = () => {
         role: userData?.role,
         room: currentRoomId,
       })
+
       setIsChatStarted(false)
       setIsChatBoxActive(false)
       setIsActive(false)
@@ -1152,10 +1284,12 @@ const ManualChat = () => {
       console.error("Error ending group chat:", error)
     }
   }, [socket, selectedUserId, selectedProviderIds, userData, currentRoomId, fetchGroupChatHistory])
+
   // Navigation handling
   useEffect(() => {
     const handleClick = (e) => {
       if (!isChatOnGoing) return
+
       const link = e.target.closest("a")
       if (link && link.href && !link.target) {
         const url = new URL(link.href)
@@ -1167,9 +1301,11 @@ const ManualChat = () => {
         }
       }
     }
+
     document.body.addEventListener("click", handleClick)
     return () => document.body.removeEventListener("click", handleClick)
   }, [isChatOnGoing])
+
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (isChatOnGoing && !isUserConfirming) {
@@ -1178,9 +1314,11 @@ const ManualChat = () => {
         return ""
       }
     }
+
     window.addEventListener("beforeunload", handleBeforeUnload)
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [isChatOnGoing, isUserConfirming])
+
   const confirmNavigation = async () => {
     setIsUserConfirming(true)
     await endGroupChat()
@@ -1192,126 +1330,11 @@ const ManualChat = () => {
       window.location.reload()
     }
   }
+
   const cancelNavigation = () => {
     setNextPath(null)
     setShowPrompt(false)
   }
-
-  // Voice Note Recording Functions
-  const startRecording = useCallback(async () => {
-    if (isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid") {
-      toast.error("Chat is ended or payment is pending.")
-      return
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream)
-      mediaRecorderRef.current = mediaRecorder
-      setAudioChunks([])
-      setRecordedAudioUrl(null)
-      setRecordingDuration(0)
-
-      mediaRecorder.ondataavailable = (event) => {
-        setAudioChunks((prev) => [...prev, event.data])
-      }
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks, { type: "audio/webm" })
-        const audioUrl = URL.createObjectURL(audioBlob)
-        setRecordedAudioUrl(audioUrl)
-        // Stop all tracks to release microphone
-        stream.getTracks().forEach((track) => track.stop())
-      }
-
-      mediaRecorder.start()
-      setIsRecording(true)
-      toast.success("Recording started...")
-
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingDuration((prev) => prev + 1)
-      }, 1000)
-    } catch (error) {
-      console.error("Error starting recording:", error)
-      toast.error("Failed to start recording. Please check microphone permissions.")
-    }
-  }, [isChatEnded, chatData])
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop()
-      setIsRecording(false)
-      clearInterval(recordingIntervalRef.current)
-      toast.success("Recording stopped.")
-    }
-  }, [])
-
-  const sendRecordedAudio = useCallback(async () => {
-    if (!recordedAudioUrl) {
-      toast.error("No audio recorded to send.")
-      return
-    }
-
-    const uploadingToast = toast.loading("Sending voice note...")
-    try {
-      const response = await fetch(recordedAudioUrl)
-      const audioBlob = await response.blob()
-
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const fileData = {
-          name: `voice_note_${Date.now()}.webm`,
-          type: audioBlob.type,
-          content: reader.result, // Base64 string
-        }
-
-        const currentUserInfo = getSenderInfo(userData._id)
-        socket.emit("manual_audio_upload", {
-          room: currentRoomId,
-          fileData,
-          senderId: userData._id,
-          senderName: currentUserInfo.name,
-          senderRole: currentUserInfo.role,
-          timestamp: new Date().toISOString(),
-          ...(replyingTo && {
-            replyTo: {
-              messageId: replyingTo.messageIndex.toString(),
-              text: replyingTo.text || (replyingTo.file ? "Image" : replyingTo.audio ? "Voice Note" : ""),
-              senderName: replyingTo.senderName,
-              senderRole: replyingTo.senderRole,
-              isFile: !!replyingTo.file,
-              isAudio: !!replyingTo.audio,
-              timestamp: replyingTo.originalTimestamp,
-            },
-          }),
-        })
-        toast.dismiss(uploadingToast)
-        toast.success("Voice note sent!")
-        cancelRecordedAudio()
-        if (replyingTo) cancelReply()
-      }
-      reader.readAsDataURL(audioBlob)
-    } catch (error) {
-      toast.dismiss(uploadingToast)
-      toast.error("Failed to send voice note.")
-      console.error("Error sending voice note:", error)
-    }
-  }, [recordedAudioUrl, userData, currentRoomId, socket, replyingTo, cancelReply, getSenderInfo])
-
-  const cancelRecordedAudio = useCallback(() => {
-    if (recordedAudioUrl) {
-      URL.revokeObjectURL(recordedAudioUrl)
-    }
-    setRecordedAudioUrl(null)
-    setAudioChunks([])
-    setRecordingDuration(0)
-    if (recordingIntervalRef.current) {
-      clearInterval(recordingIntervalRef.current)
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop() // Ensure media recorder is stopped and tracks are released
-      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
-    }
-  }, [recordedAudioUrl])
 
   // Socket event listeners for group chat
   useEffect(() => {
@@ -1323,11 +1346,13 @@ const ManualChat = () => {
         userId: id,
       })
     })
-    // Enhanced message handler to properly handle files, audio and replies
+
+    // Enhanced message handler to properly handle files and replies
     socket.on("return_message", (data) => {
       console.log("Received message from others:", data)
       // Get sender info for the incoming message
       const senderInfo = getSenderInfo(data.sender || data.senderId)
+
       // Create message object with proper structure and sender info
       const messageObj = {
         ...data,
@@ -1336,6 +1361,7 @@ const ManualChat = () => {
         senderName: data.senderName || senderInfo.name,
         senderRole: data.senderRole || senderInfo.role,
       }
+
       // If it's a file message, ensure file structure is correct
       if (data.file) {
         messageObj.file = {
@@ -1344,20 +1370,15 @@ const ManualChat = () => {
           content: data.file.content,
         }
       }
-      // If it's an audio message, ensure audio structure is correct
-      if (data.audio) {
-        messageObj.audio = {
-          name: data.audio.name,
-          type: data.audio.type,
-          content: data.audio.content,
-        }
-      }
+
       // Handle reply data
       if (data.replyTo) {
         messageObj.replyTo = data.replyTo
       }
+
       setMessages((prev) => [...prev, messageObj])
     })
+
     socket.on("user_status", ({ userId, astrologerId, status, role }) => {
       if (role === "provider") {
         setConnectedProviders((prev) => {
@@ -1372,19 +1393,24 @@ const ManualChat = () => {
       }
       setStatus(status)
     })
+
     socket.on("room_joined", (data) => {
       console.log("Room joined:", data.message)
     })
+
     socket.on("error_message", (data) => {
       toast.error(data.message)
       setIsChatBoxActive(false)
     })
+
     socket.on("wrong_message", (data) => {
       toast.error(data.message)
     })
+
     socket.on("message_sent", (data) => {
       console.log("Message sent confirmation:", data)
     })
+
     socket.on("chat_ended", (data) => {
       if (data.success) {
         setIsChatStarted(false)
@@ -1398,6 +1424,7 @@ const ManualChat = () => {
         toast.error(data.message || "Error ending group chat")
       }
     })
+
     return () => {
       socket.off("connect")
       socket.off("return_message")
@@ -1409,39 +1436,45 @@ const ManualChat = () => {
       socket.off("message_sent")
       socket.off("file_upload_success")
       socket.off("file_upload_error")
-      socket.off("audio_upload_success") // New cleanup
-      socket.off("audio_upload_error") // New cleanup
       socket.off("chat_ended")
     }
   }, [id, socket, userData, selectedProviderIds, getSenderInfo])
+
   // Content validation for messages
   const validateMessageContent = useCallback((messageText) => {
     if (!messageText || typeof messageText !== "string" || messageText.trim() === "") {
       return false
     }
+
     const prohibitedPatterns = [
       /\b\d{10}\b/,
       /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
-      /18+|\bsex\b|\bxxx\b|\bcall\b|\bphone\b|\bmobile|\bteliphone\b|\bnudes\b|\bporn\b|\bsex\scall\b|\btext\b|\bwhatsapp\b|\bskype\b|\btelegram\b|\bfacetime\b|\bvideo\schat\b|\bdial\snumber\b|\bmessage\b/i,
+      /18\+|\bsex\b|\bxxx\b|\bcall\b|\bphone\b|\bmobile|\bteliphone\b|\bnudes\b|\bporn\b|\bsex\scall\b|\btext\b|\bwhatsapp\b|\bskype\b|\btelegram\b|\bfacetime\b|\bvideo\schat\b|\bdial\snumber\b|\bmessage\b/i,
     ]
+
     return !prohibitedPatterns.some((pattern) => pattern.test(messageText))
   }, [])
+
   // Enhanced file upload handler
   const handleFileChange = useCallback(
     (event) => {
       const file = event.target.files[0]
       if (!file) return
+
       if (!file.type.startsWith("image/")) {
         toast.error("Only image files are allowed")
         event.target.value = ""
         return
       }
+
       if (file.size > MAX_FILE_SIZE) {
         toast.error("File size should not exceed 5MB")
         event.target.value = ""
         return
       }
+
       const uploadingToast = toast.loading("Uploading file...")
+
       const reader = new FileReader()
       reader.onload = () => {
         try {
@@ -1450,8 +1483,10 @@ const ManualChat = () => {
             type: file.type,
             content: reader.result,
           }
+
           // Get current user info for sender details
           const currentUserInfo = getSenderInfo(userData._id)
+
           socket.emit("manual_file_upload", {
             room: currentRoomId,
             fileData,
@@ -1470,6 +1505,7 @@ const ManualChat = () => {
               },
             }),
           })
+
           toast.dismiss(uploadingToast)
           if (replyingTo) cancelReply()
         } catch (error) {
@@ -1477,25 +1513,30 @@ const ManualChat = () => {
           toast.error("Failed to process file")
         }
       }
+
       reader.onerror = () => {
         toast.dismiss(uploadingToast)
         toast.error("Failed to read file")
       }
+
       reader.readAsDataURL(file)
       event.target.value = ""
     },
     [userData, currentRoomId, socket, replyingTo, cancelReply, getSenderInfo],
   )
+
   const handleUpdateGroupName = useCallback(
     async (newGroupName) => {
       if (!newGroupName || typeof newGroupName !== "string") {
         toast.error("Invalid group name")
         return
       }
+
       try {
         const response = await axios.put(`${ENDPOINT}api/v1/update_group_name/${currentRoomId}`, {
           groupName: newGroupName,
         })
+
         if (response.data.success) {
           toast.success("Group name updated successfully")
           setGroupName(newGroupName)
@@ -1508,22 +1549,28 @@ const ManualChat = () => {
     },
     [currentRoomId],
   )
+
   // Handle message submission with reply support
   const handleSubmit = useCallback(
     (e) => {
       e.preventDefault()
+
       const trimmedMessage = message && typeof message === "string" ? message.trim() : ""
+
       if (!trimmedMessage) {
         toast.error("Please enter a message")
         return
       }
+
       if (!validateMessageContent(trimmedMessage)) {
         toast.error("Your message contains prohibited content")
         return
       }
+
       try {
         // Get current user info for sender details
         const currentUserInfo = getSenderInfo(userData._id)
+
         const payload = {
           room: currentRoomId,
           message: trimmedMessage,
@@ -1535,15 +1582,15 @@ const ManualChat = () => {
           ...(replyingTo && {
             replyTo: {
               messageId: replyingTo.messageIndex.toString(),
-              text: replyingTo.text || (replyingTo.file ? "Image" : replyingTo.audio ? "Voice Note" : ""),
+              text: replyingTo.text || (replyingTo.file ? "Image" : ""),
               senderName: replyingTo.senderName,
               senderRole: replyingTo.senderRole,
               isFile: !!replyingTo.file,
-              isAudio: !!replyingTo.audio,
               timestamp: replyingTo.originalTimestamp,
             },
           }),
         }
+
         socket.emit("manual_message", payload)
         setMessage("")
         if (replyingTo) cancelReply()
@@ -1553,6 +1600,7 @@ const ManualChat = () => {
     },
     [message, userData, currentRoomId, socket, validateMessageContent, replyingTo, cancelReply, getSenderInfo],
   )
+
   // Filter group chats based on search term
   const filteredChats = useMemo(() => {
     return allGroupChats.filter((chat) => {
@@ -1560,6 +1608,7 @@ const ManualChat = () => {
       return groupName.toLowerCase().includes(searchTerm.toLowerCase())
     })
   }, [allGroupChats, searchTerm])
+
   // Get participant names for display
   const getParticipantNames = (chat) => {
     if (userData?.role === "provider") {
@@ -1569,9 +1618,11 @@ const ManualChat = () => {
       return providerNames
     }
   }
+
   const isMobile = window.innerWidth <= 710
   const canvasWidth = Math.min(800, window.innerWidth - 50)
   const canvasHeight = isMobile ? 170 : Math.min(600, window.innerHeight - 100)
+
   // Compact Color Picker Component
   const CompactColorPicker = ({ brushColor, setBrushColor, brushRadius, setBrushRadius }) => {
     const quickColors = [
@@ -1586,6 +1637,7 @@ const ManualChat = () => {
       "#808080",
       "#ff8000",
     ]
+
     return (
       <div className="compact-brush-controls">
         <div className="color-size-row">
@@ -1618,9 +1670,11 @@ const ManualChat = () => {
       </div>
     )
   }
+
   if (!userData) {
     return <AccessDenied />
   }
+
   if (loading) {
     return (
       <div
@@ -1646,6 +1700,7 @@ const ManualChat = () => {
       </div>
     )
   }
+
   return (
     <div className="modern-chat-container">
       <div className="container-fluid p-0">
@@ -1666,6 +1721,7 @@ const ManualChat = () => {
                   <MdSearch className="search-icon" />
                 </div>
               </div>
+
               <div className="chat-list">
                 {filteredChats.length > 0 ? (
                   filteredChats.map((chat, index) => (
@@ -1688,8 +1744,7 @@ const ManualChat = () => {
                         <div className="participants">{getParticipantNames(chat)}</div>
                         <div className="last-message">
                           {chat?.messages?.[chat?.messages.length - 1]?.text ||
-                            (chat?.messages?.[chat?.messages.length - 1]?.file ? "File Attached" :
-                            chat?.messages?.[chat?.messages.length - 1]?.audio ? "Voice Note" : "No messages yet")}
+                            (chat?.messages?.[chat?.messages.length - 1]?.file ? "File Attached" : "No messages yet")}
                         </div>
                       </div>
                       <div className="chat-meta">
@@ -1720,6 +1775,7 @@ const ManualChat = () => {
               </div>
             </div>
           )}
+
           {/* Group Chat Window */}
           {(!isMobileView || !showChatList) && (
             <div className="col-md-8 chat-window-container">
@@ -1764,7 +1820,7 @@ const ManualChat = () => {
                                   setIsEditingGroupName(false)
                                 }}
                               >
-                                {'✅'}
+                                ✅
                               </button>
                             </>
                           ) : (
@@ -1821,6 +1877,7 @@ const ManualChat = () => {
                         ))}
                     </div>
                   </div>
+
                   {chatData?.PaymentStatus?.toLowerCase() !== "paid" ? (
                     <div className="chatn-payment-warning">
                       <div className="chatn-payment-box">
@@ -1843,11 +1900,13 @@ const ManualChat = () => {
                         messages.map((msg, idx) => {
                           const isOwn = msg.sender === id
                           const senderInfo = getSenderInfo(msg.sender || msg.senderId)
+
                           return (
                             <div key={idx} className={`chatn-message ${isOwn ? "chatn-outgoing" : "chatn-incoming"}`}>
                               {!isOwn && (
                                 <div className={`chatn-sender-name ${senderInfo.role}`}>{senderInfo.name}</div>
                               )}
+
                               {/* Enhanced Reply indicator - WhatsApp style */}
                               {msg.replyTo && (
                                 <div className="chatn-reply-indicator">
@@ -1855,7 +1914,7 @@ const ManualChat = () => {
                                   <div className="chatn-reply-content">
                                     <div className="chatn-reply-sender">{msg.replyTo.senderName}</div>
                                     <div className="chatn-reply-text">
-                                      {msg.replyTo.isFile ? "📷 Image" : msg.replyTo.isAudio ? "🎤 Voice Note" : msg.replyTo.text}
+                                      {msg.replyTo.isFile ? "📷 Image" : msg.replyTo.text}
                                     </div>
                                     <div className="chatn-reply-time">
                                       {new Date(msg.timestamp).toLocaleTimeString("en-US", {
@@ -1866,6 +1925,7 @@ const ManualChat = () => {
                                   </div>
                                 </div>
                               )}
+
                               {msg.file ? (
                                 <div className="chatn-message-bubble chatn-file-message">
                                   <img
@@ -1892,28 +1952,9 @@ const ManualChat = () => {
                                     </button>
                                   </div>
                                 </div>
-                              ) : msg.audio ? ( 
-                                <div className="chatn-message-bubble chatn-audio-message">
-                                  <audio controls src={msg.audio.content} className="chatn-audio-player" />
-                                  <div className="chatn-message-actions">
-                                    <div className="chatn-message-time">
-                                      {new Date(msg.timestamp).toLocaleTimeString("en-US", {
-                                        hour: "2-digit",
-                                        minute: "2-digit",
-                                      })}
-                                    </div>
-                                    <button
-                                      className="chatn-reply-button"
-                                      onClick={() => handleReplyClick(msg, idx)}
-                                      title="Reply to this message"
-                                    >
-                                      <MdReply size={16} />
-                                    </button>
-                                  </div>
-                                </div>
                               ) : (
                                 <div className="chatn-message-bubble">
-                                  <div className="chatn-message-text">msg.text</div>
+                                  <div className="chatn-message-text">{msg.text}</div>
                                   <div className="chatn-message-actions">
                                     <div className="chatn-message-time">
                                       {new Date(msg.timestamp).toLocaleTimeString("en-US", {
@@ -1936,7 +1977,8 @@ const ManualChat = () => {
                         })
                       )}
                     </ScrollToBottom>
-                  )}\
+                  )}
+
                   {/* Enhanced Image Annotation Modal */}
                   <Modal
                     show={showModal}
@@ -1981,7 +2023,7 @@ const ManualChat = () => {
                                       }}
                                       title="Eraser"
                                     >
-                                      {'🧽'}
+                                      🧽
                                     </button>
                                     <button
                                       className={`tool-btn ${drawingTool === "rectangle" ? "active" : ""}`}
@@ -2034,6 +2076,7 @@ const ManualChat = () => {
                                   </button>
                                 </div>
                               </div>
+
                               {/* Brush/Eraser Controls Row */}
                               <CompactColorPicker
                                 brushColor={brushColor}
@@ -2041,6 +2084,7 @@ const ManualChat = () => {
                                 brushRadius={isErasing ? eraserRadius : brushRadius}
                                 setBrushRadius={isErasing ? setEraserRadius : setBrushRadius}
                               />
+
                               {/* Text Settings (only show when adding text) */}
                               {isAddingText && (
                                 <div className="text-controls-compact">
@@ -2088,6 +2132,7 @@ const ManualChat = () => {
                                   </div>
                                 </div>
                               )}
+
                               {/* Zoom Controls */}
                               <div className="zoom-controls">
                                 <span>Zoom: {Math.round(zoomLevel * 100)}%</span>
@@ -2101,6 +2146,7 @@ const ManualChat = () => {
                               </div>
                             </div>
                           )}
+
                           <div
                             className="chat-screen-canvas-wrapper"
                             style={{ position: "relative", overflow: "hidden" }}
@@ -2134,6 +2180,7 @@ const ManualChat = () => {
                                   className="chat-screen-canvas"
                                   disabled={["rectangle", "circle", "arrow", "line"].includes(drawingTool) || isErasing}
                                 />
+
                                 {/* Shape Canvas */}
                                 <canvas
                                   ref={shapeCanvasRef}
@@ -2153,6 +2200,7 @@ const ManualChat = () => {
                                   onMouseMove={handleShapeMouseMove}
                                   onMouseUp={handleShapeMouseUp}
                                 />
+
                                 {/* Eraser Canvas */}
                                 <canvas
                                   ref={eraserCanvasRef}
@@ -2167,6 +2215,7 @@ const ManualChat = () => {
                                     cursor: isErasing ? "crosshair" : "default",
                                   }}
                                 />
+
                                 {/* Text Overlay Canvas */}
                                 <canvas
                                   ref={textCanvasRef}
@@ -2182,6 +2231,7 @@ const ManualChat = () => {
                                   }}
                                   onClick={handleCanvasClick}
                                 />
+
                                 {/* Interactive Text Elements */}
                                 {textElements.map((element) => (
                                   <div
@@ -2235,7 +2285,7 @@ const ManualChat = () => {
                                           }}
                                           title="Edit text"
                                         >
-                                          {'✏️'}
+                                          ✏️
                                         </button>
                                         <button
                                           className="text-control-btn delete-btn"
@@ -2245,12 +2295,13 @@ const ManualChat = () => {
                                           }}
                                           title="Delete text"
                                         >
-                                          {'🗑️'}
+                                          🗑️
                                         </button>
                                       </div>
                                     )}
                                   </div>
                                 ))}
+
                                 {/* Text Input Field */}
                                 {textPosition && (
                                   <div
@@ -2314,6 +2365,7 @@ const ManualChat = () => {
                               </div>
                             )}
                           </div>
+
                           {/* Text Editing Modal */}
                           {isEditingText && (
                             <div className="chat-screen-text-edit-overlay">
@@ -2387,6 +2439,7 @@ const ManualChat = () => {
                       </div>
                     </Modal.Footer>
                   </Modal>
+
                   {/* Enhanced Reply Bar - WhatsApp style */}
                   {replyingTo && (
                     <div className="chatn-reply-bar">
@@ -2395,7 +2448,7 @@ const ManualChat = () => {
                           <MdReply className="chatn-reply-icon" />
                           <span className="chatn-reply-label">Replying to {replyingTo.senderName}</span>
                         </div>
-                        <div className="chatn-reply-preview">{replyingTo.file ? "📷 Image" : replyingTo.audio ? "🎤 Voice Note" : replyingTo.text}</div>
+                        <div className="chatn-reply-preview">{replyingTo.file ? "📷 Image" : replyingTo.text}</div>
                         <div className="chatn-reply-original-time">
                           {new Date(replyingTo.originalTimestamp).toLocaleTimeString("en-US", {
                             hour: "2-digit",
@@ -2408,74 +2461,52 @@ const ManualChat = () => {
                       </button>
                     </div>
                   )}
+
                   <form className="chatn-input-wrapper" onSubmit={handleSubmit}>
                     <input
                       type="file"
                       id="chatnFileUpload"
                       onChange={handleFileChange}
                       style={{ display: "none" }}
-                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" || isRecording || recordedAudioUrl}
+                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
                       accept="image/*"
                     />
                     <label
                       htmlFor="chatnFileUpload"
                       className={`chatn-attachment-button ${
-                        isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" || isRecording || recordedAudioUrl ? "disabled" : ""
+                        isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" ? "disabled" : ""
                       }`}
                     >
                       <MdAttachment />
                     </label>
-                    {/* Voice Note Controls */}
-                    {!recordedAudioUrl ? (
-                      <button
-                        type="button"
-                        className={`chatn-attachment-button ${
-                          isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" ? "disabled" : ""
-                        }`}
-                        onClick={isRecording ? stopRecording : startRecording}
-                        disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
-                      >
-                        {isRecording ? <StopCircle /> : <Mic />}
-                        {isRecording && (
-                          <span className="recording-duration">
-                            {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:
-                            {(recordingDuration % 60).toString().padStart(2, '0')}
-                          </span>
-                        )}
-                      </button>
-                    ) : (
-                      <div className="recorded-audio-preview">
-                        <audio src={recordedAudioUrl} controls className="audio-player-inline" />
-                        <button
-                          type="button"
-                          className="chatn-send-audio-button"
-                          onClick={sendRecordedAudio}
-                          disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
-                        >
-                          <Send size={18} />
-                        </button>
-                        <button
-                          type="button"
-                          className="chatn-cancel-audio-button"
-                          onClick={cancelRecordedAudio}
-                          disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
-                        >
-                          <X size={18} />
-                        </button>
-                      </div>
-                    )}
+                    <input
+                      type="file"
+                      id="chatnFileUpload"
+                      onChange={handleFileChange}
+                      style={{ display: "none" }}
+                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
+                      accept="image/*"
+                    />
+                    <label
+                      htmlFor="chatnFileUpload"
+                      className={`chatn-attachment-button ${
+                        isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" ? "disabled" : ""
+                      }`}
+                    >
+                      <Mic />
+                    </label>
                     <input
                       type="text"
                       className="chatn-text-input"
                       placeholder={replyingTo ? `Reply to ${replyingTo.senderName}...` : "Type your message..."}
                       value={message}
-                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" || isRecording || recordedAudioUrl}
+                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid"}
                       onChange={(e) => setMessage(e.target.value)}
                     />
                     <button
                       type="submit"
                       className="chatn-send-button"
-                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" || !message.trim() || isRecording || recordedAudioUrl}
+                      disabled={isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" || !message.trim()}
                     >
                       <MdSend />
                     </button>
@@ -2509,7 +2540,8 @@ const ManualChat = () => {
           )}
         </div>
       </div>
-  </div>
+    </div>
   )
 }
+
 export default ManualChat
