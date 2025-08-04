@@ -34,7 +34,7 @@ import CanvasDraw from "react-canvas-draw"
 import { Pencil } from "lucide-react"
 import VoiceRecorder from "./VoiceRecorder"; // Adjust the path as needed
 
-const ENDPOINT = "https://testapi.helpubuild.in/"
+const ENDPOINT = "https://helpapi.nypers.in/"
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
 const ManualChat = () => {

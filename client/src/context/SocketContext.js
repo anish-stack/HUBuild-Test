@@ -6,7 +6,7 @@ const SocketContext = createContext();
 
 export const useSocket = () => useContext(SocketContext);
 
-const ENDPOINT = 'https://testapi.helpubuild.in';
+const ENDPOINT = 'https://helpapi.nypers.in';
 
 export const SocketProvider = ({ children }) => {
     const socket = useMemo(() => io(ENDPOINT, {
