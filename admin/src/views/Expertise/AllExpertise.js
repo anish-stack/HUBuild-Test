@@ -14,7 +14,7 @@ const AllExpertise = () => {
     const fetchExpertise = async () => {
         setLoading(true);
         try {
-            const { data } = await axios.get('http://localhost:5654/api/v1/all_expertise');
+            const { data } = await axios.get('https://testapi.helpubuild.in/api/v1/all_expertise');
             setExpertiseList(data.data.reverse() || []);
         } catch (error) {
             console.error('Error fetching expertise:', error);
@@ -27,7 +27,7 @@ const AllExpertise = () => {
     const deleteExpertise = async (id) => {
         setLoading(true);
         try {
-            await axios.delete(`http://localhost:5654/api/v1/delete_expertise/${id}`);
+            await axios.delete(`https://testapi.helpubuild.in/api/v1/delete_expertise/${id}`);
             fetchExpertise();
             toast.success('Expertise deleted successfully!');
         } catch (error) {

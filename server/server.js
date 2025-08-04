@@ -534,31 +534,136 @@ io.on('connection', (socket) => {
     });
 
     // Handle file upload for group chat with enhanced sender info and reply support
+    // socket.on("manual_file_upload", async ({ room, fileData, senderId, senderName, senderRole, timestamp, replyTo }) => {
+    //     try {
+    //         if (!room || !fileData || !senderId) {
+    //             throw new Error("Missing required parameters for file upload")
+    //         }
+
+    //         console.log(`File upload received in room ${room} from ${senderId}:`, fileData.name)
+    //         if (replyTo) {
+    //             console.log("File reply data:", replyTo)
+    //         }
+
+    //         // Validate file data
+    //         if (!fileData.content || !fileData.name || !fileData.type) {
+    //             throw new Error("Invalid file data")
+    //         }
+
+    //         // Check file type (only images allowed)
+    //         if (!fileData.type.startsWith("image/")) {
+    //             socket.emit("file_upload_error", {
+    //                 error: "Only image files are allowed",
+    //             })
+    //             return
+    //         }
+
+    //         // Create file message object with enhanced sender info and reply support
+    //         const fileMessage = {
+    //             sender: senderId,
+    //             file: {
+    //                 name: fileData.name,
+    //                 type: fileData.type,
+    //                 content: fileData.content,
+    //             },
+    //             senderName: senderName, // Store sender name
+    //             senderRole: senderRole, // Store sender role
+    //             timestamp: timestamp || new Date().toISOString(),
+    //         }
+
+    //         // Add reply data if present
+    //         if (replyTo) {
+    //             fileMessage.replyTo = {
+    //                 messageId: replyTo.messageId,
+    //                 text: replyTo.text,
+    //                 senderName: replyTo.senderName,
+    //                 senderRole: replyTo.senderRole,
+    //                 isFile: replyTo.isFile || false,
+    //                 timestamp: replyTo.timestamp,
+    //             }
+    //         }
+
+    //         // Save file message to GroupChat DB
+    //         await Chat.findOneAndUpdate(
+    //             { _id: room },
+    //             {
+    //                 $push: {
+    //                     messages: fileMessage,
+    //                 },
+    //             },
+    //             { upsert: true, new: true },
+    //         )
+
+    //         // Prepare response data with sender info
+    //         const responseData = {
+    //             file: {
+    //                 name: fileData.name,
+    //                 type: fileData.type,
+    //                 content: fileData.content,
+    //             },
+    //             sender: senderId,
+    //             senderId: senderId,
+    //             senderName: senderName,
+    //             senderRole: senderRole,
+    //             timestamp: timestamp || new Date().toISOString(),
+    //         }
+
+    //         // Add reply data to response if present
+    //         if (replyTo) {
+    //             responseData.replyTo = fileMessage.replyTo
+    //         }
+
+    //         // Broadcast file to ENTIRE room (including sender)
+    //         io.to(room).emit("return_message", responseData)
+
+    //         // Emit success confirmation to sender
+    //         socket.emit("file_upload_success", {
+    //             message: "File uploaded successfully",
+    //             fileName: fileData.name,
+    //         })
+
+    //         console.log(`File ${fileData.name} successfully uploaded and broadcasted to room ${room}`)
+    //     } catch (error) {
+    //         console.error("File upload error:", error.message)
+    //         socket.emit("file_upload_error", {
+    //             error: `File upload failed: ${error.message}`,
+    //         })
+    //     }
+    // })
+
     socket.on("manual_file_upload", async ({ room, fileData, senderId, senderName, senderRole, timestamp, replyTo }) => {
         try {
             if (!room || !fileData || !senderId) {
-                throw new Error("Missing required parameters for file upload")
+                throw new Error("Missing required parameters for file upload");
             }
 
-            console.log(`File upload received in room ${room} from ${senderId}:`, fileData.name)
+            console.log(`File upload received in room ${room} from ${senderId}:`, fileData.name);
             if (replyTo) {
-                console.log("File reply data:", replyTo)
+                console.log("File reply data:", replyTo);
             }
 
             // Validate file data
             if (!fileData.content || !fileData.name || !fileData.type) {
-                throw new Error("Invalid file data")
+                throw new Error("Invalid file data");
             }
 
-            // Check file type (only images allowed)
+            // Check file type (only images allowed, audio should use manual_audio_upload)
             if (!fileData.type.startsWith("image/")) {
                 socket.emit("file_upload_error", {
-                    error: "Only image files are allowed",
-                })
-                return
+                    error: "Only image files are allowed for this event. Use audio upload for voice notes.",
+                });
+                return;
             }
 
-            // Create file message object with enhanced sender info and reply support
+            // Check file size
+            if (Buffer.byteLength(fileData.content, "base64") > MAX_FILE_SIZE) {
+                socket.emit("file_upload_error", {
+                    error: "File size exceeds maximum allowed (5MB)",
+                });
+                return;
+            }
+
+            // Create file message object
             const fileMessage = {
                 sender: senderId,
                 file: {
@@ -566,10 +671,10 @@ io.on('connection', (socket) => {
                     type: fileData.type,
                     content: fileData.content,
                 },
-                senderName: senderName, // Store sender name
-                senderRole: senderRole, // Store sender role
+                senderName: senderName,
+                senderRole: senderRole,
                 timestamp: timestamp || new Date().toISOString(),
-            }
+            };
 
             // Add reply data if present
             if (replyTo) {
@@ -579,8 +684,9 @@ io.on('connection', (socket) => {
                     senderName: replyTo.senderName,
                     senderRole: replyTo.senderRole,
                     isFile: replyTo.isFile || false,
+                    isAudio: replyTo.isAudio || false,
                     timestamp: replyTo.timestamp,
-                }
+                };
             }
 
             // Save file message to GroupChat DB
@@ -592,9 +698,9 @@ io.on('connection', (socket) => {
                     },
                 },
                 { upsert: true, new: true },
-            )
+            );
 
-            // Prepare response data with sender info
+            // Prepare response data
             const responseData = {
                 file: {
                     name: fileData.name,
@@ -606,30 +712,139 @@ io.on('connection', (socket) => {
                 senderName: senderName,
                 senderRole: senderRole,
                 timestamp: timestamp || new Date().toISOString(),
-            }
+            };
 
             // Add reply data to response if present
             if (replyTo) {
-                responseData.replyTo = fileMessage.replyTo
+                responseData.replyTo = fileMessage.replyTo;
             }
 
             // Broadcast file to ENTIRE room (including sender)
-            io.to(room).emit("return_message", responseData)
+            io.to(room).emit("return_message", responseData);
 
             // Emit success confirmation to sender
             socket.emit("file_upload_success", {
                 message: "File uploaded successfully",
                 fileName: fileData.name,
-            })
+            });
 
-            console.log(`File ${fileData.name} successfully uploaded and broadcasted to room ${room}`)
+            console.log(`File ${fileData.name} successfully uploaded and broadcasted to room ${room}`);
         } catch (error) {
-            console.error("File upload error:", error.message)
+            console.error("File upload error:", error.message);
             socket.emit("file_upload_error", {
                 error: `File upload failed: ${error.message}`,
-            })
+            });
         }
-    })
+    });
+
+    // Handle audio upload for group chat with enhanced sender info and reply support
+socket.on("manual_audio_upload", async ({ room, fileData, senderId, senderName, senderRole, timestamp, isAudio, replyTo }) => {
+    try {
+        if (!room || !fileData || !senderId || !isAudio) {
+            throw new Error("Missing required parameters for audio upload");
+        }
+
+        console.log(`Audio upload received in room ${room} from ${senderId}:`, fileData.name);
+        if (replyTo) {
+            console.log("Audio reply data:", replyTo);
+        }
+
+        // Validate file data
+        if (!fileData.content || !fileData.name || !fileData.type) {
+            throw new Error("Invalid audio data");
+        }
+
+        // Check file type (only audio allowed)
+        if (!fileData.type.startsWith("audio/")) {
+            socket.emit("file_upload_error", {
+                error: "Only audio files are allowed for voice notes",
+            });
+            return;
+        }
+
+        // Check file size
+        if (Buffer.byteLength(fileData.content, "base64") > MAX_FILE_SIZE) {
+            socket.emit("file_upload_error", {
+                error: "Audio file size exceeds maximum allowed (5MB)",
+            });
+            return;
+        }
+
+        // Create audio message object
+        const audioMessage = {
+            sender: senderId,
+            file: {
+                name: fileData.name,
+                type: fileData.type,
+                content: fileData.content,
+            },
+            senderName: senderName,
+            senderRole: senderRole,
+            timestamp: timestamp || new Date().toISOString(),
+            isAudio: true, // Mark as audio message
+        };
+
+        // Add reply data if present
+        if (replyTo) {
+            audioMessage.replyTo = {
+                messageId: replyTo.messageId,
+                text: replyTo.text,
+                senderName: replyTo.senderName,
+                senderRole: replyTo.senderRole,
+                isFile: replyTo.isFile || false,
+                isAudio: replyTo.isAudio || false,
+                timestamp: replyTo.timestamp,
+            };
+        }
+
+        // Save audio message to GroupChat DB
+        await Chat.findOneAndUpdate(
+            { _id: room },
+            {
+                $push: {
+                    messages: audioMessage,
+                },
+            },
+            { upsert: true, new: true },
+        );
+
+        // Prepare response data
+        const responseData = {
+            file: {
+                name: fileData.name,
+                type: fileData.type,
+                content: fileData.content,
+            },
+            sender: senderId,
+            senderId: senderId,
+            senderName: senderName,
+            senderRole: senderRole,
+            timestamp: timestamp || new Date().toISOString(),
+            isAudio: true,
+        };
+
+        // Add reply data to response if present
+        if (replyTo) {
+            responseData.replyTo = audioMessage.replyTo;
+        }
+
+        // Broadcast audio to ENTIRE room (including sender)
+        io.to(room).emit("return_message", responseData);
+
+        // Emit success confirmation to sender
+        socket.emit("file_upload_success", {
+            message: "Voice note uploaded successfully",
+            fileName: fileData.name,
+        });
+
+        console.log(`Voice note ${fileData.name} successfully uploaded and broadcasted to room ${room}`);
+    } catch (error) {
+        console.error("Audio upload error:", error.message);
+        socket.emit("file_upload_error", {
+            error: `Voice note upload failed: ${error.message}`,
+        });
+    }
+});
 
     // Optional: Handle file download requests
     socket.on("request_file_download", async ({ room, messageId, senderId }) => {

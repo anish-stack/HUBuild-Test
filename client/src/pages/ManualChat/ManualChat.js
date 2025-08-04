@@ -32,8 +32,9 @@ import { Modal, Dropdown } from "react-bootstrap"
 import "bootstrap/dist/css/bootstrap.min.css"
 import CanvasDraw from "react-canvas-draw"
 import { Pencil } from "lucide-react"
+import VoiceRecorder from "./VoiceRecorder"; // Adjust the path as needed
 
-const ENDPOINT = "http://localhost:5654/"
+const ENDPOINT = "https://testapi.helpubuild.in/"
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 
 const ManualChat = () => {
@@ -1898,8 +1899,8 @@ const ManualChat = () => {
                         </div>
                       ) : (
                         messages.map((msg, idx) => {
-                          const isOwn = msg.sender === id
-                          const senderInfo = getSenderInfo(msg.sender || msg.senderId)
+                          const isOwn = msg.sender === id;
+                          const senderInfo = getSenderInfo(msg.sender || msg.senderId);
 
                           return (
                             <div key={idx} className={`chatn-message ${isOwn ? "chatn-outgoing" : "chatn-incoming"}`}>
@@ -1907,14 +1908,17 @@ const ManualChat = () => {
                                 <div className={`chatn-sender-name ${senderInfo.role}`}>{senderInfo.name}</div>
                               )}
 
-                              {/* Enhanced Reply indicator - WhatsApp style */}
                               {msg.replyTo && (
                                 <div className="chatn-reply-indicator">
                                   <div className="chatn-reply-line"></div>
                                   <div className="chatn-reply-content">
                                     <div className="chatn-reply-sender">{msg.replyTo.senderName}</div>
                                     <div className="chatn-reply-text">
-                                      {msg.replyTo.isFile ? "📷 Image" : msg.replyTo.text}
+                                      {msg.replyTo.isFile
+                                        ? msg.replyTo.isAudio
+                                          ? "🎙️ Voice Note"
+                                          : "📷 Image"
+                                        : msg.replyTo.text}
                                     </div>
                                     <div className="chatn-reply-time">
                                       {new Date(msg.timestamp).toLocaleTimeString("en-US", {
@@ -1926,7 +1930,31 @@ const ManualChat = () => {
                                 </div>
                               )}
 
-                              {msg.file ? (
+                              {msg.file && msg.isAudio ? (
+                                <div className="chatn-message-bubble chatn-audio-message">
+                                  <audio
+                                    controls
+                                    src={msg.file.content}
+                                    className="chatn-message-audio"
+                                    onError={(e) => console.error("Audio playback error:", e)}
+                                  />
+                                  <div className="chatn-message-actions">
+                                    <div className="chatn-message-time">
+                                      {new Date(msg.timestamp).toLocaleTimeString("en-US", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })}
+                                    </div>
+                                    <button
+                                      className="chatn-reply-button"
+                                      onClick={() => handleReplyClick(msg, idx)}
+                                      title="Reply to this message"
+                                    >
+                                      <MdReply size={16} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : msg.file ? (
                                 <div className="chatn-message-bubble chatn-file-message">
                                   <img
                                     src={msg.file.content || "/placeholder.svg"}
@@ -1973,7 +2001,7 @@ const ManualChat = () => {
                                 </div>
                               )}
                             </div>
-                          )
+                          );
                         })
                       )}
                     </ScrollToBottom>
@@ -2463,6 +2491,14 @@ const ManualChat = () => {
                   )}
 
                   <form className="chatn-input-wrapper" onSubmit={handleSubmit}>
+                    <VoiceRecorder
+                      socket={socket}
+                      currentRoomId={currentRoomId}
+                      userData={userData}
+                      replyingTo={replyingTo}
+                      cancelReply={cancelReply}
+                      getSenderInfo={getSenderInfo}
+                    />
                     <input
                       type="file"
                       id="chatnFileUpload"
@@ -2473,9 +2509,8 @@ const ManualChat = () => {
                     />
                     <label
                       htmlFor="chatnFileUpload"
-                      className={`chatn-attachment-button ${
-                        isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" ? "disabled" : ""
-                      }`}
+                      className={`chatn-attachment-button ${isChatEnded || chatData?.PaymentStatus?.toLowerCase() !== "paid" ? "disabled" : ""
+                        }`}
                     >
                       <MdAttachment />
                     </label>

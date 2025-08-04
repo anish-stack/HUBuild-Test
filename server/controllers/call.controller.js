@@ -83,7 +83,7 @@ exports.createCall = async (req, res) => {
             {
                 from_number: userNumber,
                 to_number: providerNumber,
-                callback_url: "http://localhost:5654/api/v1/call_status-call",
+                callback_url: "https://testapi.helpubuild.in/api/v1/call_status-call",
                 callback_method: "POST",
                 max_duration: max_duration_allowed
             },
@@ -428,7 +428,7 @@ exports.createCallFreeModule = async (req, res) => {
             {
                 from_number: callFrom,
                 to_number: callTo,
-                // callback_url: "http://localhost:5654/api/v1/call_status-call",
+                // callback_url: "https://testapi.helpubuild.in/api/v1/call_status-call",
                 // callback_method: "POST",
                 // max_duration: max_duration_allowed
             },

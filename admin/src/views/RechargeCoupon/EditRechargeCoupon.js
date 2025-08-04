@@ -23,7 +23,7 @@ const EditRechargeCoupon = () => {
 
   const fetchCouponDetails = async () => {
     try {
-      const { data } = await axios.get(`http://localhost:5654/api/v1/recharge_coupon/${id}`);
+      const { data } = await axios.get(`https://testapi.helpubuild.in/api/v1/recharge_coupon/${id}`);
       const { couponCode, discount } = data.data;
       setCouponData({ couponCode, discount });
     } catch (error) {
@@ -48,7 +48,7 @@ const EditRechargeCoupon = () => {
 
     setLoading(true);
     try {
-      const res = await axios.put(`http://localhost:5654/api/v1/update_recharge_coupon/${id}`, {
+      const res = await axios.put(`https://testapi.helpubuild.in/api/v1/update_recharge_coupon/${id}`, {
         couponCode,
         discount
       });
