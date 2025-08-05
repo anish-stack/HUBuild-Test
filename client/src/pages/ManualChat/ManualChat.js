@@ -2431,18 +2431,20 @@ const ManualChat = () => {
                     <Modal.Footer className="chatn-footer">
                       <div className="chatn-footer-container">
                         <div>
-                          {!isAnnotating ? (
-                            <button onClick={() => setIsAnnotating(true)} className="chatn-button chatn-button-primary">
-                              <MdBrush className="chatn-icon" />
-                              Start Annotating
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => setIsAnnotating(false)}
-                              className="chatn-button chatn-button-secondary-outline"
-                            >
-                              View Only
-                            </button>
+                          {!isChatEnded && (
+                            !isAnnotating ? (
+                              <button onClick={() => setIsAnnotating(true)} className="chatn-button chatn-button-primary">
+                                <MdBrush className="chatn-icon" />
+                                Edit
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setIsAnnotating(false)}
+                                className="chatn-button chatn-button-secondary-outline"
+                              >
+                                Preview
+                              </button>
+                            )
                           )}
                         </div>
                         <div className="chatn-footer-actions">
@@ -2491,14 +2493,17 @@ const ManualChat = () => {
                   )}
 
                   <form className="chatn-input-wrapper" onSubmit={handleSubmit}>
-                    <VoiceRecorder
-                      socket={socket}
-                      currentRoomId={currentRoomId}
-                      userData={userData}
-                      replyingTo={replyingTo}
-                      cancelReply={cancelReply}
-                      getSenderInfo={getSenderInfo}
-                    />
+                    {!isChatEnded && (
+                      <VoiceRecorder
+                        socket={socket}
+                        currentRoomId={currentRoomId}
+                        userData={userData}
+                        replyingTo={replyingTo}
+                        cancelReply={cancelReply}
+                        getSenderInfo={getSenderInfo}
+                      />
+                    )
+                    }
                     <input
                       type="file"
                       id="chatnFileUpload"
