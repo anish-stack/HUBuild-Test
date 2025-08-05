@@ -55,7 +55,7 @@ const AllCustomChat = () => {
                 { isGroupChatEnded: updatedField }
             );
             handleFetchBanner();
-            toast.success(data.message);
+            toast.success(`Project is ${updatedField ? 'Closed' : "Reopend"}`);
         } catch (error) {
             console.log("Internal server error", error);
         }
