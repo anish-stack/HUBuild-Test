@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState, useCallback, useRef } from "react"
+import { debounce } from "lodash";
 import "./chat.css"
 import {
   MdAttachment,
@@ -20,6 +21,7 @@ import {
   MdZoomIn,
   MdZoomOut,
   MdCenterFocusWeak,
+  MdRedo,
 } from "react-icons/md"
 import ScrollToBottom from "react-scroll-to-bottom"
 import axios from "axios"
@@ -68,6 +70,12 @@ const ManualChat = () => {
   const [groupMembers, setGroupMembers] = useState([])
   const [isChatEnded, setIsChatEnded] = useState(false)
   const [downloadUrl, setDownloadUrl] = useState(null)
+
+  // Add new state for unified history
+  const [annotationHistory, setAnnotationHistory] = useState([]);
+  const [annotationHistoryIndex, setAnnotationHistoryIndex] = useState(-1);
+  // Add state to track ongoing drawing action
+  const [isDrawing, setIsDrawing] = useState(false);
 
   // Enhanced Reply functionality states
   const [replyingTo, setReplyingTo] = useState(null)
@@ -143,6 +151,33 @@ const ManualChat = () => {
   }, [])
 
   const socket = useSocket()
+
+  // Debounced saveAnnotationState to prevent rapid state saves
+  const saveAnnotationState = useCallback(
+    debounce(() => {
+      const canvasData = canvasRef.current ? canvasRef.current.getSaveData() : null;
+      const currentState = {
+        canvas: canvasData,
+        textElements: [...textElements],
+        shapes: [...shapes],
+      };
+
+      // Only add to history if the state has changed
+      if (
+        annotationHistoryIndex === -1 ||
+        JSON.stringify(annotationHistory[annotationHistoryIndex]) !== JSON.stringify(currentState)
+      ) {
+        setAnnotationHistory((prev) => {
+          // Trim history to current index to avoid orphaned future states
+          const newHistory = prev.slice(0, annotationHistoryIndex + 1);
+          newHistory.push(currentState);
+          return newHistory;
+        });
+        setAnnotationHistoryIndex((prev) => prev + 1);
+      }
+    }, 200), // 200ms debounce delay
+    [textElements, shapes, annotationHistoryIndex]
+  );
 
   // Enhanced function to build participants map
   const buildParticipantsMap = useCallback(
@@ -259,22 +294,29 @@ const ManualChat = () => {
     }))
   }, [])
 
-  // Enhanced Text Management Functions
+  // Modified addTextToHistory to integrate with unified history
   const addTextToHistory = useCallback(
     (elements) => {
-      const newHistory = textHistory.slice(0, historyIndex + 1)
-      newHistory.push([...elements])
-      setTextHistory(newHistory)
-      setHistoryIndex(newHistory.length - 1)
+      setTextElements(elements);
+      saveAnnotationState();
     },
-    [textHistory, historyIndex],
-  )
+    [saveAnnotationState],
+  );
+
+  // Update relevant useEffect and event handlers to save state after changes
+  useEffect(() => {
+    // Save initial state when starting annotation
+    if (isAnnotating && annotationHistory.length === 0) {
+      saveAnnotationState();
+    }
+  }, [isAnnotating, saveAnnotationState]);
 
   const generateTextId = () => `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
+  // Modified addTextElement to save state only once
   const addTextElement = useCallback(
     (x, y, text) => {
-      if (!text.trim()) return
+      if (!text.trim()) return;
 
       const newElement = {
         id: generateTextId(),
@@ -292,41 +334,44 @@ const ManualChat = () => {
         padding: textSettings.padding,
         zIndex: textElements.length + 1,
         rotation: 0,
-      }
+      };
 
-      const newElements = [...textElements, newElement]
-      setTextElements(newElements)
-      addTextToHistory(newElements)
-      setTextInput("")
-      setTextPosition(null)
-      setIsAddingText(false)
+      const newElements = [...textElements, newElement];
+      setTextElements(newElements);
+      saveAnnotationState(); // Save state once
+      setTextInput("");
+      setTextPosition(null);
+      setIsAddingText(false);
     },
-    [textElements, textSettings, addTextToHistory],
-  )
+    [textElements, textSettings, saveAnnotationState]
+  );
 
+  // Modified updateTextElement to save state only once
   const updateTextElement = useCallback(
     (id, updates) => {
-      const newElements = textElements.map((el) => (el.id === id ? { ...el, ...updates } : el))
-      setTextElements(newElements)
-      addTextToHistory(newElements)
+      const newElements = textElements.map((el) => (el.id === id ? { ...el, ...updates } : el));
+      setTextElements(newElements);
+      saveAnnotationState(); // Save state once
     },
-    [textElements, addTextToHistory],
-  )
+    [textElements, saveAnnotationState]
+  );
 
+  // Modified deleteTextElement to save state only once
   const deleteTextElement = useCallback(
     (id) => {
-      const newElements = textElements.filter((el) => el.id !== id)
-      setTextElements(newElements)
-      addTextToHistory(newElements)
-      setSelectedTextId(null)
+      const newElements = textElements.filter((el) => el.id !== id);
+      setTextElements(newElements);
+      saveAnnotationState(); // Save state once
+      setSelectedTextId(null);
     },
-    [textElements, addTextToHistory],
-  )
+    [textElements, saveAnnotationState]
+  );
 
+  // Modified duplicateTextElement to save state only once
   const duplicateTextElement = useCallback(
     (id) => {
-      const element = textElements.find((el) => el.id === id)
-      if (!element) return
+      const element = textElements.find((el) => el.id === id);
+      if (!element) return;
 
       const newElement = {
         ...element,
@@ -334,14 +379,14 @@ const ManualChat = () => {
         x: element.x + 20,
         y: element.y + 20,
         zIndex: textElements.length + 1,
-      }
+      };
 
-      const newElements = [...textElements, newElement]
-      setTextElements(newElements)
-      addTextToHistory(newElements)
+      const newElements = [...textElements, newElement];
+      setTextElements(newElements);
+      saveAnnotationState(); // Save state once
     },
-    [textElements, addTextToHistory],
-  )
+    [textElements, saveAnnotationState]
+  );
 
   const undoTextAction = useCallback(() => {
     if (historyIndex > 0) {
@@ -621,24 +666,24 @@ const ManualChat = () => {
     [isAddingText],
   )
 
-  // Shape drawing handlers
+  // Modified handleShapeMouseDown to track drawing start
   const handleShapeMouseDown = useCallback(
     (e) => {
       if (isErasing) {
-        handleEraserStart(e)
-        return
+        handleEraserStart(e);
+        return;
       }
 
       if (["rectangle", "circle", "arrow", "line"].includes(drawingTool)) {
-        const canvas = e.currentTarget
-        const rect = canvas.getBoundingClientRect()
-        const scaleX = canvas.width / rect.width
-        const scaleY = canvas.height / rect.height
-        const x = (e.clientX - rect.left) * scaleX
-        const y = (e.clientY - rect.top) * scaleY
+        const canvas = e.currentTarget;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
 
-        setIsDrawingShape(true)
-        setShapeStart({ x, y })
+        setIsDrawingShape(true);
+        setShapeStart({ x, y });
         setCurrentShape({
           type: drawingTool,
           startX: x,
@@ -647,11 +692,11 @@ const ManualChat = () => {
           endY: y,
           color: brushColor,
           radius: brushRadius,
-        })
+        });
       }
     },
     [drawingTool, brushColor, brushRadius, isErasing, handleEraserStart],
-  )
+  );
 
   const handleShapeMouseMove = useCallback(
     (e) => {
@@ -678,19 +723,23 @@ const ManualChat = () => {
     [isDrawingShape, shapeStart, isErasing, isErasingShape, handleEraserMove],
   )
 
+  // Modified handleShapeMouseUp to ensure state is saved only once
   const handleShapeMouseUp = useCallback(() => {
     if (isErasing) {
-      handleEraserEnd()
-      return
+      handleEraserEnd();
+      return;
     }
 
     if (isDrawingShape && currentShape) {
-      setShapes((prev) => [...prev, currentShape])
-      setCurrentShape(null)
-      setIsDrawingShape(false)
-      setShapeStart(null)
+      setShapes((prev) => [...prev, currentShape]);
+      setCurrentShape(null);
+      setIsDrawingShape(false);
+      setShapeStart(null);
+      saveAnnotationState(); // Save state after shape completion
     }
-  }, [isDrawingShape, currentShape, isErasing, handleEraserEnd])
+  }, [isDrawingShape, currentShape, isErasing, handleEraserEnd, saveAnnotationState]);
+
+
 
   // Enhanced Text Drag Handlers
   const handleTextMouseDown = useCallback(
@@ -905,25 +954,88 @@ const ManualChat = () => {
     }
   }
 
-  // Enhanced Clear Function
-  const handleClear = () => {
+  // Modified handleClear to reset history
+  const handleClear = useCallback(() => {
     if (canvasRef.current) {
-      canvasRef.current.clear()
+      canvasRef.current.clear();
     }
-    setTextElements([])
-    setTextHistory([])
-    setHistoryIndex(-1)
-    setShapes([])
-    setCurrentShape(null)
-  }
+    setTextElements([]);
+    setShapes([]);
+    setCurrentShape(null);
+    setAnnotationHistory([]);
+    setAnnotationHistoryIndex(-1);
+    saveAnnotationState(); // Save the cleared state
+  }, [saveAnnotationState]);
 
-  // Enhanced Undo Function
-  const handleUndo = () => {
-    if (canvasRef.current) {
-      canvasRef.current.undo()
+  // Modified handleUndo to reliably restore one step back
+  const handleUndo = useCallback(() => {
+    if (annotationHistoryIndex <= 0) {
+      // If at the start of history, clear annotations but keep history for redo
+      if (canvasRef.current) {
+        canvasRef.current.clear();
+      }
+      setTextElements([]);
+      setShapes([]);
+      setAnnotationHistoryIndex(0); // Stay at the first state
+      return;
     }
-    undoTextAction()
-  }
+
+    const previousIndex = annotationHistoryIndex - 1;
+    const previousState = annotationHistory[previousIndex];
+
+    // Restore canvas drawing
+    if (canvasRef.current) {
+      if (previousState.canvas) {
+        try {
+          canvasRef.current.loadSaveData(previousState.canvas, true);
+        } catch (error) {
+          console.error("Failed to restore canvas:", error);
+          canvasRef.current.clear();
+        }
+      } else {
+        canvasRef.current.clear();
+      }
+    }
+
+    // Restore text elements and shapes
+    setTextElements([...previousState.textElements]);
+    setShapes([...previousState.shapes]);
+
+    // Update history index
+    setAnnotationHistoryIndex(previousIndex);
+  }, [annotationHistory, annotationHistoryIndex]);
+
+  // Add handleRedo to restore undone steps one by one
+  const handleRedo = useCallback(() => {
+    if (annotationHistoryIndex >= annotationHistory.length - 1) {
+      // No more states to redo
+      return;
+    }
+
+    const nextIndex = annotationHistoryIndex + 1;
+    const nextState = annotationHistory[nextIndex];
+
+    // Restore canvas drawing
+    if (canvasRef.current) {
+      if (nextState.canvas) {
+        try {
+          canvasRef.current.loadSaveData(nextState.canvas, true);
+        } catch (error) {
+          console.error("Failed to restore canvas:", error);
+          canvasRef.current.clear();
+        }
+      } else {
+        canvasRef.current.clear();
+      }
+    }
+
+    // Restore text elements and shapes
+    setTextElements([...nextState.textElements]);
+    setShapes([...nextState.shapes]);
+
+    // Update history index
+    setAnnotationHistoryIndex(nextIndex);
+  }, [annotationHistory, annotationHistoryIndex]);
 
   // Handle click outside text elements to unselect
   const handleCanvasWrapperClick = useCallback(
@@ -956,6 +1068,32 @@ const ManualChat = () => {
     window.addEventListener("resize", handleResize)
     return () => window.removeEventListener("resize", handleResize)
   }, [])
+
+  // Modified CanvasDraw mouse events to ensure state is saved only on completion
+  useEffect(() => {
+    if (canvasRef.current) {
+      const canvas = canvasRef.current.canvas.drawing;
+      const handleDrawStart = () => {
+        setIsDrawing(true);
+      };
+      const handleDrawEnd = () => {
+        if (isDrawing) {
+          saveAnnotationState();
+          setIsDrawing(false);
+        }
+      };
+
+      canvas.addEventListener("mousedown", handleDrawStart);
+      canvas.addEventListener("mouseup", handleDrawEnd);
+      canvas.addEventListener("mouseleave", handleDrawEnd);
+
+      return () => {
+        canvas.removeEventListener("mousedown", handleDrawStart);
+        canvas.removeEventListener("mouseup", handleDrawEnd);
+        canvas.removeEventListener("mouseleave", handleDrawEnd);
+      };
+    }
+  }, [isDrawing, saveAnnotationState]);
 
   // Handle image click
   const handleImageClick = (image) => {
@@ -2043,7 +2181,7 @@ const ManualChat = () => {
                                     >
                                       <MdBrush />
                                     </button>
-                                    <button
+                                    {/* <button
                                       className={`tool-btn ${isErasing ? "active" : ""}`}
                                       onClick={() => {
                                         setIsErasing(!isErasing)
@@ -2052,7 +2190,7 @@ const ManualChat = () => {
                                       title="Eraser"
                                     >
                                       🧽
-                                    </button>
+                                    </button> */}
                                     <button
                                       className={`tool-btn ${drawingTool === "rectangle" ? "active" : ""}`}
                                       onClick={() => {
@@ -2095,6 +2233,9 @@ const ManualChat = () => {
                                 <div className="action-group">
                                   <button className="action-btn undo-btn" onClick={handleUndo} title="Undo">
                                     <MdUndo />
+                                  </button>
+                                  <button className="action-btn redo-btn" onClick={handleRedo} title="Redo">
+                                    <MdRedo />
                                   </button>
                                   <button className="action-btn clear-btn" onClick={handleClear} title="Clear All">
                                     <MdClear />
@@ -2207,6 +2348,13 @@ const ManualChat = () => {
                                   lazyRadius={0}
                                   className="chat-screen-canvas"
                                   disabled={["rectangle", "circle", "arrow", "line"].includes(drawingTool) || isErasing}
+                                  onMouseDown={() => setIsDrawing(true)}
+                                  onMouseUp={() => {
+                                    if (isDrawing) {
+                                      saveAnnotationState(); // Save state only on mouse up
+                                      setIsDrawing(false);
+                                    }
+                                  }}
                                 />
 
                                 {/* Shape Canvas */}
