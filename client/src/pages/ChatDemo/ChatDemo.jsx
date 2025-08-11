@@ -13,7 +13,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { Modal, Button } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const ENDPOINT = "https://helpapi.nypers.in/"
+const ENDPOINT = "https://testapi.dessobuild.com/"
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB file size limit
 
 const ChatDemo = () => {

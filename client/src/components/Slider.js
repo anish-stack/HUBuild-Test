@@ -13,7 +13,7 @@ const Slider = () => {
   const [mobileBanner, setMobileBanner] = useState([])
   const handleFetchBanner = async () => {
     try {
-      const { data } = await axios.get('https://helpapi.nypers.in/api/v1/get-all-banner')
+      const { data } = await axios.get('https://testapi.dessobuild.com/api/v1/get-all-banner')
       const allBanner = data.data
       const filterData = allBanner.filter(item => item.active === true)
       const desktopBanner = filterData.filter(item => item.view === 'Desktop')
