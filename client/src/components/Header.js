@@ -309,7 +309,7 @@ const Header = () => {
 
                     <ul className="dropdown-menu" aria-labelledby="loginDropdown">
                       <li>
-                        <a className="dropdown-item" href="/user-login">
+                        <a className="dropdown-item" href="/login">
                           <i className="fas fa-user me-2"></i>
                           Login as User
                         </a>
