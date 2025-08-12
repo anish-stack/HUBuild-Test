@@ -79,7 +79,7 @@ function App() {
         <Route path="/user-register" element={<Register />} />
         <Route path="/profile" element={<UserDashboard />} />
 
-        <Route path="/login" element={<Login />} />
+        <Route path="/user-login" element={<Login />} />
         <Route path="/partner-login" element={<PartnerLogin />} />
         <Route path="/otp-verification/user" element={<VerifyEmail />} />
         <Route path="/talk-to-interior" element={<TalkToInterior />} />
