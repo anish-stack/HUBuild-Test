@@ -169,7 +169,7 @@ const Header = () => {
               key: "rzp_live_bmq7YMRTuGvvfu",
               amount: amount * 100,
               currency: "INR",
-              name: "Desso Build",
+              name: "DessoBuild",
               description: "Buying Membership",
               order_id: order.id,
               callback_url: "https://testapi.dessobuild.com/api/v1/membership_payment_verify",
@@ -198,9 +198,9 @@ const Header = () => {
 
   const navigationItems = [
     { path: "/", label: "Home" },
-    { path: "/talk-to-architect", label: "Talk to Architect" },
-    { path: "/talk-to-interior", label: "Talk to Interior Designer" },
-    { path: "/Vastu", label: "Talk to Vastu Expert" },
+    { path: "/talk-to-architect", label: "Connect With Architect" },
+    { path: "/talk-to-interior", label: "Connect With Interior Designer" },
+    { path: "/Vastu", label: "Connect With Vastu Expert" },
     { path: "/contact", label: "Contact" }
   ];
 
@@ -212,7 +212,7 @@ const Header = () => {
           <Link className="navbar-brand hub-header__brand" to="/" onClick={handleLinkClick}>
             <img
               src={logo || "/placeholder.svg"}
-              alt="Desso Build"
+              alt="DessoBuild"
               className="hub-header__logo"
             />
           </Link>
