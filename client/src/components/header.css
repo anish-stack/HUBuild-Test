@@ -52,7 +52,7 @@
 }
 
 .hub-header__logo {
-    height: 50px;
+    height: 60px;
     width: auto;
     max-width: 200px;
     object-fit: contain;
@@ -60,7 +60,7 @@
 }
 
 .hub-header--fixed .hub-header__logo {
-    height: 40px;
+    height: 60px;
 }
 
 /* Navigation Styles */

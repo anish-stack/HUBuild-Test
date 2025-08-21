@@ -542,7 +542,7 @@ function Vastu() {
           key: "rzp_live_bmq7YMRTuGvvfu",
           amount: amount * 100,
           currency: "INR",
-          name: "Desso Build",
+          name: "DessoBuild",
           description: "Doing Recharge",
           order_id: order?.id || "",
           callback_url: "https://testapi.dessobuild.com/api/v1/verify-payment",
