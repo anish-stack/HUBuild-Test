@@ -2193,7 +2193,7 @@ const ManualChat = () => {
                                   </div>
                                 </div>
                                 <div className="action-group">
-                                  <button className="action-btn undo-btn" onClick={handleUndo} title="Undo">
+                                  {/* <button className="action-btn undo-btn" onClick={handleUndo} title="Undo">
                                     <MdUndo />
                                   </button>
                                   <button className="action-btn redo-btn" onClick={handleRedo} title="Redo">
@@ -2201,7 +2201,7 @@ const ManualChat = () => {
                                   </button>
                                   <button className="action-btn clear-btn" onClick={handleClear} title="Clear All">
                                     <MdClear />
-                                  </button>
+                                  </button> */}
                                   <button className="action-btn zoom-btn" onClick={resetZoom} title="Reset Zoom">
                                     <MdCenterFocusWeak />
                                   </button>
