@@ -1,3 +1,4 @@
+
 "use client"
 import { useEffect, useMemo, useState, useCallback, useRef } from "react"
 import { debounce } from "lodash";
@@ -85,7 +86,6 @@ const ManualChat = () => {
   const [brushColor, setBrushColor] = useState("#ff0000")
   const [brushRadius, setBrushRadius] = useState(2)
   const [isAnnotating, setIsAnnotating] = useState(false)
-  const [isErasing, setIsErasing] = useState(false)
   const canvasRef = useRef()
 
   // Enhanced Text Annotation States
@@ -124,7 +124,6 @@ const ManualChat = () => {
 
   // Enhanced Eraser States
   const [eraserRadius, setEraserRadius] = useState(10)
-  const [isErasingShape, setIsErasingShape] = useState(false)
 
   // Zoom functionality states
   const [zoomLevel, setZoomLevel] = useState(1)
@@ -142,7 +141,6 @@ const ManualChat = () => {
   const editTextInputRef = useRef()
   const containerRef = useRef()
   const shapeCanvasRef = useRef()
-  const eraserCanvasRef = useRef()
 
   // User data from session storage
   const userData = useMemo(() => {
@@ -175,7 +173,7 @@ const ManualChat = () => {
         });
         setAnnotationHistoryIndex((prev) => prev + 1);
       }
-    }, 200), // 200ms debounce delay
+    }, 100), // Reduced to 100ms for faster response
     [textElements, shapes, annotationHistoryIndex]
   );
 
@@ -338,7 +336,7 @@ const ManualChat = () => {
 
       const newElements = [...textElements, newElement];
       setTextElements(newElements);
-      saveAnnotationState(); // Save state once
+      saveAnnotationState();
       setTextInput("");
       setTextPosition(null);
       setIsAddingText(false);
@@ -351,7 +349,7 @@ const ManualChat = () => {
     (id, updates) => {
       const newElements = textElements.map((el) => (el.id === id ? { ...el, ...updates } : el));
       setTextElements(newElements);
-      saveAnnotationState(); // Save state once
+      saveAnnotationState();
     },
     [textElements, saveAnnotationState]
   );
@@ -361,7 +359,7 @@ const ManualChat = () => {
     (id) => {
       const newElements = textElements.filter((el) => el.id !== id);
       setTextElements(newElements);
-      saveAnnotationState(); // Save state once
+      saveAnnotationState();
       setSelectedTextId(null);
     },
     [textElements, saveAnnotationState]
@@ -383,7 +381,7 @@ const ManualChat = () => {
 
       const newElements = [...textElements, newElement];
       setTextElements(newElements);
-      saveAnnotationState(); // Save state once
+      saveAnnotationState();
     },
     [textElements, saveAnnotationState]
   );
@@ -466,43 +464,6 @@ const ManualChat = () => {
     },
     [shapes],
   )
-
-  const handleEraserMove = useCallback(
-    (e) => {
-      if (!isErasing || !isErasingShape) return
-
-      const canvas = eraserCanvasRef.current
-      if (!canvas) return
-
-      const rect = canvas.getBoundingClientRect()
-      const scaleX = canvas.width / rect.width
-      const scaleY = canvas.height / rect.height
-      const x = (e.clientX - rect.left) * scaleX
-      const y = (e.clientY - rect.top) * scaleY
-
-      // Check for shape collisions and remove them
-      const collidingShapes = checkShapeCollision(x, y, eraserRadius)
-      if (collidingShapes.length > 0) {
-        const shapesToRemove = collidingShapes.map((shape) => shapes.indexOf(shape))
-        const newShapes = shapes.filter((_, index) => !shapesToRemove.includes(index))
-        setShapes(newShapes)
-      }
-    },
-    [isErasing, isErasingShape, eraserRadius, checkShapeCollision, shapes],
-  )
-
-  const handleEraserStart = useCallback(
-    (e) => {
-      if (!isErasing) return
-      setIsErasingShape(true)
-      handleEraserMove(e)
-    },
-    [isErasing, handleEraserMove],
-  )
-
-  const handleEraserEnd = useCallback(() => {
-    setIsErasingShape(false)
-  }, [])
 
   // Zoom functionality
   const handleZoom = useCallback(
@@ -633,21 +594,22 @@ const ManualChat = () => {
     }
   }, [shapes, currentShape, drawShape])
 
-  const renderEraserCursor = useCallback(() => {
-    const canvas = eraserCanvasRef.current
-    if (!canvas || !isErasing) return
-
-    const ctx = canvas.getContext("2d")
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-  }, [isErasing])
-
   useEffect(() => {
     renderShapes()
   }, [renderShapes])
 
-  useEffect(() => {
-    renderEraserCursor()
-  }, [renderEraserCursor])
+  const getEraserCursor = useCallback(() => {
+    const cursorCanvas = document.createElement("canvas");
+    cursorCanvas.width = eraserRadius * 2 + 2;
+    cursorCanvas.height = eraserRadius * 2 + 2;
+    const ctx = cursorCanvas.getContext("2d");
+    ctx.beginPath();
+    ctx.arc(eraserRadius + 1, eraserRadius + 1, eraserRadius, 0, 2 * Math.PI);
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    return `url(${cursorCanvas.toDataURL()}) ${eraserRadius + 1} ${eraserRadius + 1}, auto`;
+  }, [eraserRadius]);
 
   // Enhanced Canvas Click Handler
   const handleCanvasClick = useCallback(
@@ -666,22 +628,49 @@ const ManualChat = () => {
     [isAddingText],
   )
 
-  // Modified handleShapeMouseDown to track drawing start
+  // Modified handleShapeMouseDown to handle eraser for brush strokes and shapes
   const handleShapeMouseDown = useCallback(
     (e) => {
-      if (isErasing) {
-        handleEraserStart(e);
-        return;
-      }
+      const canvas = e.currentTarget;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
 
-      if (["rectangle", "circle", "arrow", "line"].includes(drawingTool)) {
-        const canvas = e.currentTarget;
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
+      if (drawingTool === "eraser") {
+        if (canvasRef.current) {
+          // Erase brush strokes on CanvasDraw
+          const drawingCanvas = canvasRef.current.canvas.drawing;
+          const ctx = drawingCanvas.getContext("2d");
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(x, y, eraserRadius, 0, 2 * Math.PI);
+          ctx.clip();
+          ctx.clearRect(x - eraserRadius, y - eraserRadius, eraserRadius * 2, eraserRadius * 2);
+          ctx.restore();
+          saveAnnotationState();
+        }
 
+        // Erase shapes
+        const collidingShapes = checkShapeCollision(x, y, eraserRadius);
+        if (collidingShapes.length > 0) {
+          let topIndex = -1;
+          let topShape = null;
+          collidingShapes.forEach((shape) => {
+            const idx = shapes.indexOf(shape);
+            if (idx > topIndex) {
+              topIndex = idx;
+              topShape = shape;
+            }
+          });
+
+          if (topShape) {
+            setShapes((prev) => prev.filter((s) => s !== topShape));
+            saveAnnotationState();
+          }
+        }
+      } else if (["rectangle", "circle", "arrow", "line"].includes(drawingTool)) {
         setIsDrawingShape(true);
         setShapeStart({ x, y });
         setCurrentShape({
@@ -695,16 +684,11 @@ const ManualChat = () => {
         });
       }
     },
-    [drawingTool, brushColor, brushRadius, isErasing, handleEraserStart],
+    [drawingTool, brushColor, brushRadius, eraserRadius, checkShapeCollision, shapes, saveAnnotationState],
   );
 
   const handleShapeMouseMove = useCallback(
     (e) => {
-      if (isErasing && isErasingShape) {
-        handleEraserMove(e)
-        return
-      }
-
       if (isDrawingShape && shapeStart) {
         const canvas = e.currentTarget
         const rect = canvas.getBoundingClientRect()
@@ -720,26 +704,18 @@ const ManualChat = () => {
         }))
       }
     },
-    [isDrawingShape, shapeStart, isErasing, isErasingShape, handleEraserMove],
+    [isDrawingShape, shapeStart],
   )
 
-  // Modified handleShapeMouseUp to ensure state is saved only once
   const handleShapeMouseUp = useCallback(() => {
-    if (isErasing) {
-      handleEraserEnd();
-      return;
-    }
-
     if (isDrawingShape && currentShape) {
       setShapes((prev) => [...prev, currentShape]);
       setCurrentShape(null);
       setIsDrawingShape(false);
       setShapeStart(null);
-      saveAnnotationState(); // Save state after shape completion
+      saveAnnotationState();
     }
-  }, [isDrawingShape, currentShape, isErasing, handleEraserEnd, saveAnnotationState]);
-
-
+  }, [isDrawingShape, currentShape, saveAnnotationState]);
 
   // Enhanced Text Drag Handlers
   const handleTextMouseDown = useCallback(
@@ -964,26 +940,24 @@ const ManualChat = () => {
     setCurrentShape(null);
     setAnnotationHistory([]);
     setAnnotationHistoryIndex(-1);
-    saveAnnotationState(); // Save the cleared state
+    saveAnnotationState();
   }, [saveAnnotationState]);
 
   // Modified handleUndo to reliably restore one step back
   const handleUndo = useCallback(() => {
     if (annotationHistoryIndex <= 0) {
-      // If at the start of history, clear annotations but keep history for redo
       if (canvasRef.current) {
         canvasRef.current.clear();
       }
       setTextElements([]);
       setShapes([]);
-      setAnnotationHistoryIndex(0); // Stay at the first state
+      setAnnotationHistoryIndex(0);
       return;
     }
 
     const previousIndex = annotationHistoryIndex - 1;
     const previousState = annotationHistory[previousIndex];
 
-    // Restore canvas drawing
     if (canvasRef.current) {
       if (previousState.canvas) {
         try {
@@ -997,25 +971,20 @@ const ManualChat = () => {
       }
     }
 
-    // Restore text elements and shapes
     setTextElements([...previousState.textElements]);
     setShapes([...previousState.shapes]);
-
-    // Update history index
     setAnnotationHistoryIndex(previousIndex);
   }, [annotationHistory, annotationHistoryIndex]);
 
-  // Add handleRedo to restore undone steps one by one
+  // Add handleRedo to restore undone steps
   const handleRedo = useCallback(() => {
     if (annotationHistoryIndex >= annotationHistory.length - 1) {
-      // No more states to redo
       return;
     }
 
     const nextIndex = annotationHistoryIndex + 1;
     const nextState = annotationHistory[nextIndex];
 
-    // Restore canvas drawing
     if (canvasRef.current) {
       if (nextState.canvas) {
         try {
@@ -1029,11 +998,8 @@ const ManualChat = () => {
       }
     }
 
-    // Restore text elements and shapes
     setTextElements([...nextState.textElements]);
     setShapes([...nextState.shapes]);
-
-    // Update history index
     setAnnotationHistoryIndex(nextIndex);
   }, [annotationHistory, annotationHistoryIndex]);
 
@@ -1486,13 +1452,10 @@ const ManualChat = () => {
       })
     })
 
-    // Enhanced message handler to properly handle files and replies
     socket.on("return_message", (data) => {
       console.log("Received message from others:", data)
-      // Get sender info for the incoming message
       const senderInfo = getSenderInfo(data.sender || data.senderId)
 
-      // Create message object with proper structure and sender info
       const messageObj = {
         ...data,
         senderId: data.sender || data.senderId,
@@ -1501,7 +1464,6 @@ const ManualChat = () => {
         senderRole: data.senderRole || senderInfo.role,
       }
 
-      // If it's a file message, ensure file structure is correct
       if (data.file) {
         messageObj.file = {
           name: data.file.name,
@@ -1510,7 +1472,6 @@ const ManualChat = () => {
         }
       }
 
-      // Handle reply data
       if (data.replyTo) {
         messageObj.replyTo = data.replyTo
       }
@@ -1623,7 +1584,6 @@ const ManualChat = () => {
             content: reader.result,
           }
 
-          // Get current user info for sender details
           const currentUserInfo = getSenderInfo(userData._id)
 
           socket.emit("manual_file_upload", {
@@ -1707,7 +1667,6 @@ const ManualChat = () => {
       }
 
       try {
-        // Get current user info for sender details
         const currentUserInfo = getSenderInfo(userData._id)
 
         const payload = {
@@ -1763,7 +1722,7 @@ const ManualChat = () => {
   const canvasHeight = isMobile ? 170 : Math.min(600, window.innerHeight - 100)
 
   // Compact Color Picker Component
-  const CompactColorPicker = ({ brushColor, setBrushColor, brushRadius, setBrushRadius }) => {
+  const CompactColorPicker = ({ brushColor, setBrushColor, brushRadius, setBrushRadius, isEraser }) => {
     const quickColors = [
       "#ff0000",
       "#00ff00",
@@ -1780,22 +1739,24 @@ const ManualChat = () => {
     return (
       <div className="compact-brush-controls">
         <div className="color-size-row">
-          <div className="color-section">
-            <label>Color:</label>
-            <div className="color-options">
-              {quickColors.map((color) => (
-                <div
-                  key={color}
-                  className={`color-dot ${brushColor === color ? "active" : ""}`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => setBrushColor(color)}
-                  title={color}
-                />
-              ))}
+          {!isEraser && (
+            <div className="color-section">
+              <label>Color:</label>
+              <div className="color-options">
+                {quickColors.map((color) => (
+                  <div
+                    key={color}
+                    className={`color-dot ${brushColor === color ? "active" : ""}`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setBrushColor(color)}
+                    title={color}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
           <div className="size-section">
-            <label>Size: {brushRadius}px</label>
+            <label>{isEraser ? "Eraser" : ""} Size: {brushRadius}px</label>
             <input
               type="range"
               min="1"
@@ -2155,10 +2116,16 @@ const ManualChat = () => {
                     ref={modalRef}
                   >
                     <Modal.Header closeButton className="chat-screen-modal-header">
-                      <Modal.Title className="chat-screen-modal-title">
-                        <MdBrush className="chat-screen-title-icon" />
-                        {isAnnotating ? "Annotate Image" : "View Image"} - {selectedImage?.name}
-                      </Modal.Title>
+                      <div style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between', marginRight:'1%'}}>
+                        <Modal.Title className="chat-screen-modal-title">
+                          <MdBrush className="chat-screen-title-icon" />
+                          {isAnnotating ? "Annotate Image" : "View Image"} - {selectedImage?.name}
+                        </Modal.Title>
+                        <button className="chatn-button chatn-button-outline" onClick={handleBase64Download}>
+                          <MdAttachment className="chatn-icon" />
+                          Download
+                        </button>
+                      </div>
                     </Modal.Header>
                     <Modal.Body className="chat-screen-modal-body">
                       {selectedImage && (
@@ -2172,30 +2139,27 @@ const ManualChat = () => {
                                   <label>Tools:</label>
                                   <div className="tool-buttons">
                                     <button
-                                      className={`tool-btn ${drawingTool === "brush" && !isErasing ? "active" : ""}`}
+                                      className={`tool-btn ${drawingTool === "brush" ? "active" : ""}`}
                                       onClick={() => {
                                         setDrawingTool("brush")
-                                        setIsErasing(false)
                                       }}
                                       title="Brush"
                                     >
                                       <MdBrush />
                                     </button>
-                                    {/* <button
-                                      className={`tool-btn ${isErasing ? "active" : ""}`}
+                                    <button
+                                      className={`tool-btn ${drawingTool === "eraser" ? "active" : ""}`}
                                       onClick={() => {
-                                        setIsErasing(!isErasing)
-                                        setDrawingTool("brush")
+                                        setDrawingTool("eraser")
                                       }}
                                       title="Eraser"
                                     >
-                                      🧽
-                                    </button> */}
+                                      <MdClear />
+                                    </button>
                                     <button
                                       className={`tool-btn ${drawingTool === "rectangle" ? "active" : ""}`}
                                       onClick={() => {
                                         setDrawingTool("rectangle")
-                                        setIsErasing(false)
                                       }}
                                       title="Rectangle"
                                     >
@@ -2205,7 +2169,6 @@ const ManualChat = () => {
                                       className={`tool-btn ${drawingTool === "circle" ? "active" : ""}`}
                                       onClick={() => {
                                         setDrawingTool("circle")
-                                        setIsErasing(false)
                                       }}
                                       title="Circle"
                                     >
@@ -2215,7 +2178,6 @@ const ManualChat = () => {
                                       className={`tool-btn ${drawingTool === "arrow" ? "active" : ""}`}
                                       onClick={() => {
                                         setDrawingTool("arrow")
-                                        setIsErasing(false)
                                       }}
                                       title="Arrow"
                                     >
@@ -2248,10 +2210,11 @@ const ManualChat = () => {
 
                               {/* Brush/Eraser Controls Row */}
                               <CompactColorPicker
-                                brushColor={brushColor}
-                                setBrushColor={setBrushColor}
-                                brushRadius={isErasing ? eraserRadius : brushRadius}
-                                setBrushRadius={isErasing ? setEraserRadius : setBrushRadius}
+                                brushColor={drawingTool === "eraser" ? "#FFFFFF" : brushColor}
+                                setBrushColor={drawingTool === "eraser" ? () => {} : setBrushColor}
+                                brushRadius={drawingTool === "eraser" ? eraserRadius : brushRadius}
+                                setBrushRadius={drawingTool === "eraser" ? setEraserRadius : setBrushRadius}
+                                isEraser={drawingTool === "eraser"}
                               />
 
                               {/* Text Settings (only show when adding text) */}
@@ -2333,7 +2296,7 @@ const ManualChat = () => {
                                   position: "relative",
                                   transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
                                   transformOrigin: "0 0",
-                                  cursor: isPanning ? "grabbing" : isErasing ? "crosshair" : "default",
+                                  cursor: isPanning ? "grabbing" : "default",
                                 }}
                               >
                                 {/* Drawing Canvas */}
@@ -2343,11 +2306,11 @@ const ManualChat = () => {
                                   canvasWidth={canvasWidth}
                                   canvasHeight={canvasHeight}
                                   loadTimeOffset={10}
-                                  brushRadius={brushRadius}
-                                  brushColor={isErasing ? "#FFFFFF" : brushColor}
+                                  brushRadius={drawingTool === "eraser" ? eraserRadius : brushRadius}
+                                  brushColor={drawingTool === "eraser" ? "#FFFFFF" : brushColor}
                                   lazyRadius={0}
                                   className="chat-screen-canvas"
-                                  disabled={["rectangle", "circle", "arrow", "line"].includes(drawingTool) || isErasing}
+                                  disabled={!["brush", "eraser"].includes(drawingTool)}
                                   onMouseDown={() => setIsDrawing(true)}
                                   onMouseUp={() => {
                                     if (isDrawing) {
@@ -2367,29 +2330,15 @@ const ManualChat = () => {
                                     top: 0,
                                     left: 0,
                                     pointerEvents:
-                                      ["rectangle", "circle", "arrow", "line"].includes(drawingTool) || isErasing
+                                      ["rectangle", "circle", "arrow", "line", "eraser"].includes(drawingTool)
                                         ? "auto"
                                         : "none",
                                     zIndex: 5,
+                                    cursor: drawingTool === "eraser" ? getEraserCursor() : "default",
                                   }}
                                   onMouseDown={handleShapeMouseDown}
                                   onMouseMove={handleShapeMouseMove}
                                   onMouseUp={handleShapeMouseUp}
-                                />
-
-                                {/* Eraser Canvas */}
-                                <canvas
-                                  ref={eraserCanvasRef}
-                                  width={canvasWidth}
-                                  height={canvasHeight}
-                                  style={{
-                                    position: "absolute",
-                                    top: 0,
-                                    left: 0,
-                                    pointerEvents: isErasing ? "auto" : "none",
-                                    zIndex: 6,
-                                    cursor: isErasing ? "crosshair" : "default",
-                                  }}
                                 />
 
                                 {/* Text Overlay Canvas */}
@@ -2606,10 +2555,10 @@ const ManualChat = () => {
                               {loading ? "Sending..." : "Send to Chat"}
                             </button>
                           )}
-                          <button className="chatn-button chatn-button-outline" onClick={handleBase64Download}>
+                          {/* <button className="chatn-button chatn-button-outline" onClick={handleBase64Download}>
                             <MdAttachment className="chatn-icon" />
                             Download
-                          </button>
+                          </button> */}
                           <button onClick={handleCloseModal} className="chatn-button chatn-button-secondary">
                             Close
                           </button>
