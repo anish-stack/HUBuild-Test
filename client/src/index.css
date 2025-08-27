@@ -455,7 +455,7 @@ a {
 }
 
 .canvas-container{
-  width: 100% !important;
+  /* width: 100% !important; */
   /* height: auto !important; */
 }
 
@@ -469,4 +469,9 @@ a {
 
 .tool-height{
   height:'100%';
+}
+
+.forwidthcanva{
+  width: 100% !important;
+  height: 100% !important;
 }
