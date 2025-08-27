@@ -2474,7 +2474,7 @@ const ManualChat = () => {
                                     brushRadius={drawingTool === "eraser" ? eraserRadius : brushRadius}
                                     brushColor={drawingTool === "eraser" ? "#FFFFFF" : brushColor}
                                     lazyRadius={0}
-                                    className="shadow rounded forwidthfullcanvas"
+                                    className="shadow rounded"
                                     disabled={!["brush", "eraser"].includes(drawingTool)}
                                     onMouseDown={() => setIsDrawing(true)}
                                     onMouseUp={() => {
@@ -2651,7 +2651,8 @@ const ManualChat = () => {
                                     style={{
                                       transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`,
                                       transformOrigin: "0 0",
-                                      maxHeight: '100%',
+                                      // maxHeight: '100%',
+                                      height:'500px',
                                       maxWidth: '100%',
                                     }}
                                   />
