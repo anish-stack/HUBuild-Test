@@ -23,6 +23,7 @@ import {
   MdCenterFocusWeak,
   MdRedo,
 } from "react-icons/md"
+import { TfiText } from "react-icons/tfi";
 import ScrollToBottom from "react-scroll-to-bottom"
 import axios from "axios"
 import { GetData } from "../../utils/sessionStoreage"
@@ -33,7 +34,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { Modal, Dropdown } from "react-bootstrap"
 import "bootstrap/dist/css/bootstrap.min.css"
 import CanvasDraw from "react-canvas-draw"
-import { Pencil } from "lucide-react"
+import { Pencil, Type } from "lucide-react"
 import VoiceRecorder from "./VoiceRecorder"; // Adjust the path as needed
 
 const ENDPOINT = "https://testapi.dessobuild.com/"
@@ -2300,7 +2301,7 @@ const ManualChat = () => {
                                       onClick={() => setIsAddingText(!isAddingText)}
                                       style={{ display: 'flex' }}
                                     >
-                                      <MdPinEnd />
+                                      <TfiText />
                                     </button>
                                   </div>
                                 </div>
