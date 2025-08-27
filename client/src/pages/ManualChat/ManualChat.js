@@ -2168,7 +2168,7 @@ const ManualChat = () => {
                     className="image-annotation-modal"
                     ref={modalRef}
                   >
-                    <Modal.Header closeButton className="border-0 bg-primary text-white">
+                    <Modal.Header closeButton style={{backgroundColor:'#EDBE3A'}} className="border-0 text-white">
                       <div style={{display:'flex'}} className="w-100 align-items-center justify-content-between">
                         <Modal.Title className="d-flex align-items-center gap-2 fw-bold fs-5 mb-0">
                           <MdBrush className="fs-4" />
@@ -2722,7 +2722,7 @@ const ManualChat = () => {
                       )}
                     </Modal.Body>
 
-                    <Modal.Footer className="border-0 bg-light">
+                    <Modal.Footer style={{backgroundColor:'#e5e3e3'}} className="border-0">
                       <div style={{display:'flex'}} className="w-100 justify-content-between align-items-center">
                         <small className="text-muted">
                           {isAnnotating ? "🎨 Editing Mode Active" : "👀 Preview Mode"}
