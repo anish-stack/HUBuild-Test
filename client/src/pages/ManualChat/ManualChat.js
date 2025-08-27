@@ -2474,7 +2474,7 @@ const ManualChat = () => {
                                     brushRadius={drawingTool === "eraser" ? eraserRadius : brushRadius}
                                     brushColor={drawingTool === "eraser" ? "#FFFFFF" : brushColor}
                                     lazyRadius={0}
-                                    className="shadow rounded"
+                                    className="shadow rounded forwidthfullcanvas"
                                     disabled={!["brush", "eraser"].includes(drawingTool)}
                                     onMouseDown={() => setIsDrawing(true)}
                                     onMouseUp={() => {
