@@ -2528,14 +2528,15 @@
   margin-left: 0px !important;
 }
 
+/* Ensure the canvas wrapper is a valid drop target */
+.canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
 
-
-
-
-
-
-
-
-
-
-
+.canvas-wrapper.drag-over {
+  border: 2px dashed #0d6efd;
+  background-color: rgba(13, 110, 253, 0.1);
+  transition: all 0.2s ease-in-out;
+}
