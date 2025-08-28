@@ -88,6 +88,8 @@ const ManualChat = () => {
   const [isChatEnded, setIsChatEnded] = useState(false)
   const [downloadUrl, setDownloadUrl] = useState(null)
 
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+
   // Add state for dynamic canvas dimensions
   const [canvasWidth, setCanvasWidth] = useState(800);
   const [canvasHeight, setCanvasHeight] = useState(600);
@@ -126,32 +128,49 @@ const ManualChat = () => {
     padding: 4,
   })
   useEffect(() => {
-    if ( selectedImage?.content && showModal && containerRef.current) {
+    if (selectedImage?.content && showModal && containerRef.current) {
       const img = new Image();
       img.src = selectedImage.content;
       img.onload = () => {
-        setCanvasWidth(img.naturalWidth);
-        setCanvasHeight(img.naturalHeight);
-        // Center the image
         const container = containerRef.current;
         const rect = container.getBoundingClientRect();
-        const offsetX = (rect.width - img.naturalWidth * zoomLevel) / 2;
-        const offsetY = (rect.height - img.naturalHeight * zoomLevel) / 2;
+        const containerWidth = rect.width;
+        const containerHeight = rect.height;
+        const imgWidth = img.naturalWidth;
+        const imgHeight = img.naturalHeight;
+
+        // Calculate zoom to fit image within container, capped at 100%
+        const zoomToFitWidth = (containerWidth - 20) / imgWidth; // Add padding
+        const zoomToFitHeight = (containerHeight - 20) / imgHeight; // Add padding
+        const newZoom = Math.min(zoomToFitWidth, zoomToFitHeight, 1);
+
+        // Set canvas dimensions to image's natural size
+        setCanvasWidth(imgWidth);
+        setCanvasHeight(imgHeight);
+
+        // Center the image
+        const scaledWidth = imgWidth * newZoom;
+        const scaledHeight = imgHeight * newZoom;
+        const offsetX = (containerWidth - scaledWidth) / 2;
+        const offsetY = (containerHeight - scaledHeight) / 2;
+
+        setZoomLevel(newZoom);
         setPanOffset({ x: offsetX, y: offsetY });
       };
       img.onerror = () => {
         console.error("Failed to load image for sizing");
         setCanvasWidth(800);
         setCanvasHeight(600);
-        // Center with fallback dimensions
         const container = containerRef.current;
         const rect = container.getBoundingClientRect();
-        const offsetX = (rect.width - 800 * zoomLevel) / 2;
-        const offsetY = (rect.height - 600 * zoomLevel) / 2;
+        const offsetX = (rect.width - 800) / 2;
+        const offsetY = (rect.height - 600) / 2;
+        setZoomLevel(1);
         setPanOffset({ x: offsetX, y: offsetY });
       };
     }
   }, [selectedImage, showModal]);
+
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [textHistory, setTextHistory] = useState([])
   const [historyIndex, setHistoryIndex] = useState(-1)
@@ -396,13 +415,13 @@ const ManualChat = () => {
 
   // Modified updateTextElement to save state only once
   const updateTextElement = useCallback(
-    (id, updates) => {
-      const newElements = textElements.map((el) => (el.id === id ? { ...el, ...updates } : el));
-      setTextElements(newElements);
-      saveAnnotationState();
-    },
-    [textElements, saveAnnotationState]
-  );
+  (id, updates) => {
+    const newElements = textElements.map((el) => (el.id === id ? { ...el, ...updates } : el));
+    setTextElements(newElements);
+    saveAnnotationState();
+  },
+  [textElements, saveAnnotationState]
+);
 
   // Modified deleteTextElement to save state only once
   const deleteTextElement = useCallback(
@@ -413,6 +432,82 @@ const ManualChat = () => {
       setSelectedTextId(null);
     },
     [textElements, saveAnnotationState]
+  );
+
+  // Handle drag enter
+  const handleDragEnter = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  }, []);
+
+  // Handle drag over
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  }, []);
+
+  // Handle drag leave
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  }, []);
+
+  // Handle drop
+  const handleDrop = useCallback(
+    (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDraggingOver(false);
+
+      const file = e.dataTransfer.files[0];
+      if (!file) {
+        toast.error("No file dropped");
+        return;
+      }
+
+      if (!file.type.startsWith("image/")) {
+        toast.error("Only image files are allowed");
+        return;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error("File size should not exceed 5MB");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const fileData = {
+            name: file.name,
+            type: file.type,
+            content: reader.result,
+          };
+          setSelectedImage(fileData);
+          setIsAnnotating(true); // Enable annotation mode for the new image
+          setTextElements([]);
+          setShapes([]);
+          setAnnotationHistory([]);
+          setAnnotationHistoryIndex(-1);
+          if (canvasRef.current) {
+            canvasRef.current.clear();
+          }
+        } catch (error) {
+          toast.error("Failed to process dropped image");
+          console.error("Error processing dropped image:", error);
+        }
+      };
+
+      reader.onerror = () => {
+        toast.error("Failed to read dropped image");
+      };
+
+      reader.readAsDataURL(file);
+    },
+    [MAX_FILE_SIZE]
   );
 
   // Modified duplicateTextElement to save state only once
@@ -518,7 +613,7 @@ const ManualChat = () => {
 
   // Zoom functionality
   const handleZoom = useCallback(
-    (delta, mouseX, mouseY) => {
+    (delta, mouseX = null, mouseY = null) => {
       const zoomFactor = delta > 0 ? 1.1 : 0.9;
       const newZoom = Math.min(Math.max(zoomLevel * zoomFactor, 0.1), 5);
 
@@ -526,6 +621,10 @@ const ManualChat = () => {
         const container = containerRef.current;
         if (container) {
           const rect = container.getBoundingClientRect();
+          if (mouseX === null || mouseY === null) {
+            mouseX = rect.left + rect.width / 2;
+            mouseY = rect.top + rect.height / 2;
+          }
           const px = mouseX - rect.left;
           const py = mouseY - rect.top;
 
@@ -553,8 +652,8 @@ const ManualChat = () => {
   const resetZoom = useCallback(() => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      const offsetX = (rect.width - canvasWidth * 1) / 2;
-      const offsetY = (rect.height - canvasHeight * 1) / 2;
+      const offsetX = (rect.width - canvasWidth) / 2;
+      const offsetY = (rect.height - canvasHeight) / 2;
       setPanOffset({ x: offsetX, y: offsetY });
     }
     setZoomLevel(1);
@@ -562,13 +661,13 @@ const ManualChat = () => {
 
   // Pan functionality
   const handleMouseDown = useCallback((e) => {
-    if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
-      // Middle mouse or Ctrl+Left click
+    if (e.button === 1 || (e.button === 0 && (e.ctrlKey || !isAnnotating))) {
+      // Middle mouse or Ctrl+Left click or Left click in preview mode
       setIsPanning(true);
       setLastPanPoint({ x: e.clientX, y: e.clientY });
       e.preventDefault();
     }
-  }, []);
+  }, [isAnnotating]);
 
   const handleMouseMove = useCallback(
     (e) => {
@@ -866,34 +965,51 @@ const ManualChat = () => {
 
   // Text Double Click Handler for Editing
   const handleTextDoubleClick = useCallback(
-    (textId) => {
-      const element = textElements.find((el) => el.id === textId);
-      if (!element) return;
+  (textId) => {
+    const element = textElements.find((el) => el.id === textId);
+    if (!element) return;
 
-      setIsEditingText(true);
-      setEditingTextId(textId);
-      setEditingTextValue(element.text);
-      setSelectedTextId(textId);
+    setIsEditingText(true);
+    setEditingTextId(textId);
+    setEditingTextValue(element.text);
+    setSelectedTextId(textId);
+    // Set text settings based on the selected element
+    setTextSettings({
+      fontSize: element.fontSize,
+      color: element.color,
+      fontFamily: element.fontFamily,
+      fontWeight: element.fontWeight,
+      fontStyle: element.fontStyle,
+      textDecoration: element.textDecoration,
+      textAlign: element.textAlign,
+      backgroundColor: element.backgroundColor,
+      padding: element.padding,
+    });
 
-      setTimeout(() => {
-        if (editTextInputRef.current) {
-          editTextInputRef.current.focus();
-          editTextInputRef.current.select();
-        }
-      }, 100);
-    },
-    [textElements]
-  );
+    setTimeout(() => {
+      if (editTextInputRef.current) {
+        editTextInputRef.current.focus();
+        editTextInputRef.current.select();
+      }
+    }, 100);
+  },
+  [textElements]
+);
 
   // Save Text Edit
   const saveTextEdit = useCallback(() => {
-    if (editingTextId && editingTextValue.trim()) {
-      updateTextElement(editingTextId, { text: editingTextValue.trim() });
-    }
-    setIsEditingText(false);
-    setEditingTextId(null);
-    setEditingTextValue("");
-  }, [editingTextId, editingTextValue, updateTextElement]);
+  if (editingTextId && editingTextValue.trim()) {
+    updateTextElement(editingTextId, {
+      text: editingTextValue.trim(),
+      fontSize: textSettings.fontSize,
+      color: textSettings.color,
+      fontFamily: textSettings.fontFamily,
+    });
+  }
+  setIsEditingText(false);
+  setEditingTextId(null);
+  setEditingTextValue("");
+}, [editingTextId, editingTextValue, textSettings, updateTextElement]);
 
   // Cancel Text Edit
   const cancelTextEdit = useCallback(() => {
@@ -2235,7 +2351,11 @@ const ManualChat = () => {
                           {!isChatEnded && (
                             !isAnnotating ? (
                               <button
-                                onClick={() => setIsAnnotating(true)}
+                                onClick={() => {
+                                  setIsAnnotating(true);
+                                  // Optional: Reset zoom when entering annotation mode
+                                  resetZoom();
+                                }}
                                 className="btn btn-light btn-sm align-items-center gap-1"
                                 style={{ display: 'flex' }}
                               >
@@ -2244,7 +2364,11 @@ const ManualChat = () => {
                               </button>
                             ) : (
                               <button
-                                onClick={() => setIsAnnotating(false)}
+                                onClick={() => {
+                                  setIsAnnotating(false);
+                                  setZoomLevel(1); // Reset zoom
+                                  setPanOffset({ x: 0, y: 0 }); // Reset pan
+                                }}
                                 className="btn btn-outline-light btn-sm align-items-center gap-1"
                                 style={{ display: 'flex' }}
                               >
@@ -2285,13 +2409,13 @@ const ManualChat = () => {
                       </div>
                     </Modal.Header>
 
-                    <Modal.Body className="p-0" style={{ height: '80vh' }}>
+                    <Modal.Body className="p-0" style={{ height: '80vh', overflow: 'hidden' }}>
                       {selectedImage && (
                         <div className="h-100 d-flex flex-column flex-lg-row">
                           {/* Tools Panel - Left Sidebar on Desktop, Top on Mobile */}
                           {isAnnotating && (
                             <div className="tools-panel text-white p-3 order-1 tool-height order-lg-0"
-                              style={{ minWidth: '280px', overflowY: 'auto' }}>
+                              style={{ minWidth: '300px', overflowY: 'auto' }}>
 
                               {/* Drawing Tools Section */}
                               <div className="mb-4">
@@ -2301,8 +2425,7 @@ const ManualChat = () => {
                                 <div style={{ display: 'flex' }} className="gap-1">
                                   <div className="">
                                     <button
-                                      className={`btn align-items-center gap-2 ${drawingTool === "brush" ? "btn-info text-dark" : "btn-outline-info"
-                                        }`}
+                                      className={`btn align-items-center gap-2 ${drawingTool === "brush" ? "btn-info text-dark" : "btn-outline-info"}`}
                                       onClick={() => setDrawingTool("brush")}
                                       style={{ display: 'flex' }}
                                       title="Brush Tool - Draw freehand"
@@ -2312,8 +2435,7 @@ const ManualChat = () => {
                                   </div>
                                   <div className="">
                                     <button
-                                      className={`btn align-items-center gap-2 ${drawingTool === "eraser" ? "btn-info text-dark" : "btn-outline-info"
-                                        }`}
+                                      className={`btn align-items-center gap-2 ${drawingTool === "eraser" ? "btn-info text-dark" : "btn-outline-info"}`}
                                       onClick={() => setDrawingTool("eraser")}
                                       style={{ display: 'flex' }}
                                       title="Eraser Tool - Remove drawings"
@@ -2323,8 +2445,7 @@ const ManualChat = () => {
                                   </div>
                                   <div className="">
                                     <button
-                                      className={`btn align-items-center gap-2 ${drawingTool === "rectangle" ? "btn-info text-dark" : "btn-outline-info"
-                                        }`}
+                                      className={`btn align-items-center gap-2 ${drawingTool === "rectangle" ? "btn-info text-dark" : "btn-outline-info"}`}
                                       onClick={() => setDrawingTool("rectangle")}
                                       style={{ display: 'flex' }}
                                       title="Rectangle Tool - Draw rectangles"
@@ -2334,8 +2455,7 @@ const ManualChat = () => {
                                   </div>
                                   <div className="">
                                     <button
-                                      className={`btn align-items-center gap-2 ${drawingTool === "circle" ? "btn-info text-dark" : "btn-outline-info"
-                                        }`}
+                                      className={`btn align-items-center gap-2 ${drawingTool === "circle" ? "btn-info text-dark" : "btn-outline-info"}`}
                                       onClick={() => setDrawingTool("circle")}
                                       style={{ display: 'flex' }}
                                       title="Circle Tool - Draw circles"
@@ -2345,8 +2465,7 @@ const ManualChat = () => {
                                   </div>
                                   <div className="">
                                     <button
-                                      className={`btn align-items-center gap-2 ${drawingTool === "arrow" ? "btn-info text-dark" : "btn-outline-info"
-                                        }`}
+                                      className={`btn align-items-center gap-2 ${drawingTool === "arrow" ? "btn-info text-dark" : "btn-outline-info"}`}
                                       onClick={() => setDrawingTool("arrow")}
                                       style={{ display: 'flex' }}
                                       title="Arrow Tool - Draw arrows"
@@ -2356,8 +2475,7 @@ const ManualChat = () => {
                                   </div>
                                   <div className="">
                                     <button
-                                      className={`btn align-items-center gap-2 ${isAddingText ? "btn-info text-dark" : "btn-outline-info"
-                                        }`}
+                                      className={`btn align-items-center gap-2 ${isAddingText ? "btn-info text-dark" : "btn-outline-info"}`}
                                       onClick={() => setIsAddingText(!isAddingText)}
                                       style={{ display: 'flex' }}
                                       title="Text Tool - Add text"
@@ -2374,7 +2492,7 @@ const ManualChat = () => {
                                   {drawingTool === "eraser" ? "Eraser Settings" : "Brush Settings"}
                                 </h6>
 
-                                <div className=" canvas-flex gap-3">
+                                <div className="canvas-flex gap-3">
                                   {drawingTool !== "eraser" && (
                                     <div className="mb-3">
                                       <label className="form-label text-black small">Color</label>
@@ -2386,7 +2504,6 @@ const ManualChat = () => {
                                           className="form-control border form-control-color"
                                           style={{ width: '50px', height: '40px' }}
                                         />
-                                        {/* <span className="text-black small">{brushColor}</span> */}
                                       </div>
                                     </div>
                                   )}
@@ -2408,9 +2525,7 @@ const ManualChat = () => {
                                       className="form-range"
                                     />
                                   </div>
-
                                 </div>
-
                               </div>
 
                               {/* Text Settings */}
@@ -2421,7 +2536,6 @@ const ManualChat = () => {
                                   </h6>
 
                                   <div className="canvas-flex gap-3">
-
                                     <div className="mb-3">
                                       <label className="form-label text-black small">Text Color</label>
                                       <input
@@ -2453,7 +2567,6 @@ const ManualChat = () => {
                                     </div>
                                   </div>
 
-
                                   <div className="mb-3">
                                     <label className="form-label text-black small">Font Family</label>
                                     <select
@@ -2474,324 +2587,418 @@ const ManualChat = () => {
 
                               {/* Zoom Controls */}
                               <div className="mb-4">
-                                <h6 className="text-black mb-3">Zoom & Navigation</h6>
-                                <div style={{ display: 'flex' }} className="align-items-center gap-2 mb-2">
-                                  <span className="badge bg-info text-dark">{Math.round(zoomLevel * 100)}%</span>
+                                <h6 className="text-black mb-3 d-flex align-items-center gap-2">
+                                  <MdZoomIn className="text-primary" /> Zoom Controls
+                                </h6>
+                                <div className="d-flex align-items-center gap-2">
                                   <button
-                                    onClick={() => handleZoom(-1, 0, 0)}
-                                    className="btn btn-outline-light border text-black btn-sm"
+                                    className="btn btn-outline-primary btn-sm"
+                                    onClick={() => handleZoom(100)}
+                                    title="Zoom In"
                                   >
-                                    <MdZoomOut />
+                                    <MdZoomIn size={20} />
+                                  </button>
+                                  <span className="badge bg-light text-dark">{Math.round(zoomLevel * 100)}%</span>
+                                  <button
+                                    className="btn btn-outline-primary btn-sm"
+                                    onClick={() => handleZoom(-100)}
+                                    title="Zoom Out"
+                                  >
+                                    <MdZoomOut size={20} />
                                   </button>
                                   <button
-                                    onClick={() => handleZoom(1, 0, 0)}
-                                    className="btn btn-outline-light border text-black btn-sm"
-                                  >
-                                    <MdZoomIn />
-                                  </button>
-                                  <button
+                                    className="btn btn-outline-primary btn-sm"
                                     onClick={resetZoom}
-                                    className="btn btn-outline-warning btn-sm"
                                     title="Reset Zoom"
                                   >
-                                    <MdCenterFocusWeak />
+                                    <MdCenterFocusWeak size={20} />
                                   </button>
                                 </div>
-                                <small className="text-muted d-block">
-                                  💡 Scroll: Zoom | Ctrl+Drag: Pan
-                                </small>
+                                <p className="text-black small mt-2">
+                                  Tip: Hold Ctrl + Click and drag to pan the image
+                                </p>
                               </div>
-
                             </div>
                           )}
 
                           {/* Canvas Area - Right Side on Desktop, Bottom on Mobile */}
                           <div className="canvas-area flex-grow-1 bg-light position-relative order-0 order-lg-1">
-              <div
-                className="canvas-wrapper position-relative overflow-hidden h-100 align-items-center justify-content-center"
-                onClick={handleCanvasWrapperClick}
-                onWheel={handleWheel}
-                onMouseDown={handleMouseDown}
-                onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                ref={containerRef}
-                style={{ display: 'flex' }}
-              >
-                {isAnnotating ? (
-                  <div
-                    className="canvas-container position-relative"
-                    style={{
-                      transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
-                      transformOrigin: "0 0",
-                      cursor: isPanning ? "grabbing" : "default",
-                      width: `${canvasWidth}px`,
-                      height: `${canvasHeight}px`,
-                    }}
-                  >
-                    {/* Drawing Canvas */}
-                    <CanvasDraw
-                      ref={canvasRef}
-                      imgSrc={selectedImage?.content}
-                      canvasWidth={canvasWidth}
-                      canvasHeight={canvasHeight}
-                      loadTimeOffset={10}
-                      brushRadius={drawingTool === "eraser" ? eraserRadius : brushRadius}
-                      brushColor={drawingTool === "eraser" ? "#FFFFFF" : brushColor}
-                      lazyRadius={0}
-                      className="shadow rounded"
-                      disabled={!["brush", "eraser"].includes(drawingTool)}
-                      onMouseDown={(e) => {
-                        const { x, y } = getAdjustedMousePosition(e);
-                        canvasRef.current?.drawPoint(x, y); // Draw at adjusted position
-                        setIsDrawing(true);
-                      }}
-                      onMouseMove={(e) => {
-                        if (isDrawing && ["brush", "eraser"].includes(drawingTool)) {
-                          const { x, y } = getAdjustedMousePosition(e);
-                          canvasRef.current?.drawPoint(x, y); // Draw at adjusted position
-                        }
-                      }}
-                      onMouseUp={() => {
-                        if (isDrawing) {
-                          saveAnnotationState();
-                          setIsDrawing(false);
-                        }
-                      }}
-                    />
+                            <div
+                              className={`canvas-wrapper position-relative overflow-hidden h-100 align-items-center justify-content-center ${isDraggingOver ? "drag-over" : ""}`}
+                              onClick={handleCanvasWrapperClick}
+                              onWheel={handleWheel}
+                              onMouseDown={handleMouseDown}
+                              onMouseMove={handleMouseMove}
+                              onMouseUp={handleMouseUp}
+                              onDragEnter={handleDragEnter}
+                              onDragOver={handleDragOver}
+                              onDragLeave={handleDragLeave}
+                              onDrop={handleDrop}
+                              ref={containerRef}
+                              style={{ display: "flex" }}
+                            >
+                              {isAnnotating ? (
+                                <div
+                                  className="canvas-container position-relative"
+                                  style={{
+                                    transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
+                                    transformOrigin: "0 0",
+                                    cursor: isPanning ? "grabbing" : (isAnnotating ? (drawingTool === "eraser" ? getEraserCursor() : "default") : "grab"),
+                                    width: `${canvasWidth}px`,
+                                    height: `${canvasHeight}px`,
+                                  }}
+                                >
+                                  <>
+                                    {/* Drawing Canvas */}
+                                    <CanvasDraw
+                                      ref={canvasRef}
+                                      imgSrc={selectedImage?.content}
+                                      canvasWidth={canvasWidth}
+                                      canvasHeight={canvasHeight}
+                                      loadTimeOffset={10}
+                                      brushRadius={drawingTool === "eraser" ? eraserRadius : brushRadius}
+                                      brushColor={drawingTool === "eraser" ? "#FFFFFF" : brushColor}
+                                      lazyRadius={0}
+                                      className="shadow rounded"
+                                      disabled={!["brush", "eraser"].includes(drawingTool)}
+                                      onMouseDown={(e) => {
+                                        if (["brush", "eraser"].includes(drawingTool) && canvasRef.current) {
+                                          const { x, y } = getAdjustedMousePosition(e);
+                                          const ctx = canvasRef.current.canvas.drawing.getContext("2d");
+                                          ctx.beginPath();
+                                          ctx.moveTo(x, y);
+                                          setIsDrawing(true);
+                                        }
+                                      }}
+                                      onMouseMove={(e) => {
+                                        if (isDrawing && ["brush", "eraser"].includes(drawingTool) && canvasRef.current) {
+                                          const { x, y } = getAdjustedMousePosition(e);
+                                          const ctx = canvasRef.current.canvas.drawing.getContext("2d");
+                                          ctx.lineTo(x, y);
+                                          ctx.strokeStyle = drawingTool === "eraser" ? "#FFFFFF" : brushColor;
+                                          ctx.lineWidth = drawingTool === "eraser" ? eraserRadius * 2 : brushRadius * 2;
+                                          ctx.lineCap = "round";
+                                          ctx.lineJoin = "round";
+                                          ctx.stroke();
+                                        }
+                                      }}
+                                      onMouseUp={() => {
+                                        if (isDrawing && ["brush", "eraser"].includes(drawingTool) && canvasRef.current) {
+                                          canvasRef.current.canvas.drawing.getContext("2d").closePath();
+                                          saveAnnotationState();
+                                          setIsDrawing(false);
+                                        }
+                                      }}
+                                      onMouseLeave={() => {
+                                        if (isDrawing && ["brush", "eraser"].includes(drawingTool) && canvasRef.current) {
+                                          canvasRef.current.canvas.drawing.getContext("2d").closePath();
+                                          saveAnnotationState();
+                                          setIsDrawing(false);
+                                        }
+                                      }}
+                                    />
 
-                    {/* Shape Canvas */}
-                    <canvas
-                      ref={shapeCanvasRef}
-                      width={canvasWidth}
-                      height={canvasHeight}
-                      className="position-absolute top-0 start-0 shadow rounded"
-                      style={{
-                        pointerEvents: ["rectangle", "circle", "arrow", "line", "eraser"].includes(drawingTool)
-                          ? "auto" : "none",
-                        zIndex: 5,
-                        cursor: drawingTool === "eraser" ? getEraserCursor() : "default",
-                      }}
-                      onMouseDown={handleShapeMouseDown}
-                      onMouseMove={handleShapeMouseMove}
-                      onMouseUp={handleShapeMouseUp}
-                    />
+                                    {/* Shape Canvas */}
+                                    <canvas
+                                      ref={shapeCanvasRef}
+                                      width={canvasWidth}
+                                      height={canvasHeight}
+                                      className="position-absolute top-0 start-0 shadow rounded"
+                                      style={{
+                                        pointerEvents: ["rectangle", "circle", "arrow", "line", "eraser"].includes(drawingTool)
+                                          ? "auto" : "none",
+                                        zIndex: 5,
+                                        cursor: drawingTool === "eraser" ? getEraserCursor() : "default",
+                                      }}
+                                      onMouseDown={handleShapeMouseDown}
+                                      onMouseMove={handleShapeMouseMove}
+                                      onMouseUp={handleShapeMouseUp}
+                                    />
 
-                    {/* Text Overlay Canvas */}
-                    <canvas
-                      ref={textCanvasRef}
-                      width={canvasWidth}
-                      height={canvasHeight}
-                      className="position-absolute top-0 start-0"
-                      style={{
-                        pointerEvents: isAddingText ? "auto" : "none",
-                        zIndex: 10,
-                        cursor: isAddingText ? "crosshair" : "default",
-                      }}
-                      onClick={handleCanvasClick}
-                    />
+                                    {/* Text Overlay Canvas */}
+                                    <canvas
+                                      ref={textCanvasRef}
+                                      width={canvasWidth}
+                                      height={canvasHeight}
+                                      className="position-absolute top-0 start-0"
+                                      style={{
+                                        pointerEvents: isAddingText ? "auto" : "none",
+                                        zIndex: 10,
+                                        cursor: isAddingText ? "crosshair" : "default",
+                                      }}
+                                      onClick={handleCanvasClick}
+                                    />
 
-                    {/* Interactive Text Elements */}
-                    {textElements.map((element) => (
-                      <div
-                        key={element.id}
-                        className={`text-element position-absolute user-select-none ${selectedTextId === element.id ? 'selected' : ''}`}
-                        style={{
-                          left: element.x,
-                          top: element.y,
-                          fontSize: `${element.fontSize}px`,
-                          fontFamily: element.fontFamily,
-                          fontWeight: element.fontWeight,
-                          fontStyle: element.fontStyle,
-                          textDecoration: element.textDecoration,
-                          color: element.color,
-                          backgroundColor: element.backgroundColor,
-                          padding: `${element.padding}px`,
-                          cursor: isDragging ? "grabbing" : "grab",
-                          zIndex: element.zIndex + 10,
-                          transform: `rotate(${element.rotation || 0}deg)`,
-                          textAlign: element.textAlign,
-                          border: selectedTextId === element.id
-                            ? "2px dashed #0d6efd"
-                            : "1px solid transparent",
-                          borderRadius: "6px",
-                          minWidth: "20px",
-                          minHeight: `${element.fontSize}px`,
-                          boxShadow: selectedTextId === element.id
-                            ? "0 0 0 0.25rem rgba(13, 110, 253, 0.25)"
-                            : "0 0.25rem 0.5rem rgba(0,0,0,0.1)",
-                          transition: "all 0.2s ease-in-out",
-                          whiteSpace: "nowrap",
-                          overflow: "visible",
-                        }}
-                        onMouseDown={(e) => handleTextMouseDown(e, element.id)}
-                        onDoubleClick={() => handleTextDoubleClick(element.id)}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTextId(element.id);
-                        }}
-                      >
-                        {element.text}
-                        {selectedTextId === element.id && (
-                          <div className="position-absolute top-0 end-0">
-                            <div className="btn-group-vertical btn-group-sm shadow"
-                              style={{ transform: 'translate(50%, -50%)' }}>
-                              <button
-                                className="btn btn-primary btn-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleTextDoubleClick(element.id);
-                                }}
-                                title="Edit text"
-                              >
-                                ✏️
-                              </button>
-                              <button
-                                className="btn btn-danger btn-sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteTextElement(element.id);
-                                }}
-                                title="Delete text"
-                              >
-                                🗑️
-                              </button>
+                                    {/* Interactive Text Elements */}
+                                    {textElements.map((element) => (
+                                      <div
+                                        key={element.id}
+                                        className={`text-element position-absolute user-select-none ${selectedTextId === element.id ? 'selected' : ''}`}
+                                        style={{
+                                          left: element.x,
+                                          top: element.y,
+                                          fontSize: `${element.fontSize}px`,
+                                          fontFamily: element.fontFamily,
+                                          fontWeight: element.fontWeight,
+                                          fontStyle: element.fontStyle,
+                                          textDecoration: element.textDecoration,
+                                          color: element.color,
+                                          backgroundColor: element.backgroundColor,
+                                          padding: `${element.padding}px`,
+                                          cursor: isDragging ? "grabbing" : "grab",
+                                          zIndex: element.zIndex + 10,
+                                          transform: `rotate(${element.rotation || 0}deg)`,
+                                          textAlign: element.textAlign,
+                                          border: selectedTextId === element.id
+                                            ? "2px dashed #0d6efd"
+                                            : "1px solid transparent",
+                                          borderRadius: "6px",
+                                          minWidth: "20px",
+                                          minHeight: `${element.fontSize}px`,
+                                          boxShadow: selectedTextId === element.id
+                                            ? "0 0 0 0.25rem rgba(13, 110, 253, 0.25)"
+                                            : "0 0.25rem 0.5rem rgba(0,0,0,0.1)",
+                                          transition: "all 0.2s ease-in-out",
+                                          whiteSpace: "nowrap",
+                                          overflow: "visible",
+                                        }}
+                                        onMouseDown={(e) => handleTextMouseDown(e, element.id)}
+                                        onDoubleClick={() => handleTextDoubleClick(element.id)}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedTextId(element.id);
+                                        }}
+                                      >
+                                        {element.text}
+                                        {selectedTextId === element.id && (
+                                          <div className="position-absolute top-0 end-0">
+                                            <div className="btn-group-vertical btn-group-sm shadow"
+                                              style={{ transform: 'translate(50%, -50%)' }}>
+                                              <button
+                                                className="btn btn-primary btn-sm"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleTextDoubleClick(element.id);
+                                                }}
+                                                title="Edit text"
+                                              >
+                                                ✏️
+                                              </button>
+                                              <button
+                                                className="btn btn-danger btn-sm"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  deleteTextElement(element.id);
+                                                }}
+                                                title="Delete text"
+                                              >
+                                                🗑️
+                                              </button>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+
+                                    {/* Text Input Field */}
+                                    {textPosition && (
+                                      <div
+                                        className="position-absolute"
+                                        style={{
+                                          top: textPosition.y,
+                                          left: textPosition.x,
+                                          zIndex: 20,
+                                        }}
+                                      >
+                                        <div className="input-group shadow-lg">
+                                          <input
+                                            type="text"
+                                            autoFocus
+                                            value={textInput}
+                                            onChange={(e) => setTextInput(e.target.value)}
+                                            onKeyDown={(e) => {
+                                              if (e.key === "Enter" && textInput.trim()) {
+                                                addTextElement(textPosition.x, textPosition.y, textInput);
+                                              } else if (e.key === "Escape") {
+                                                setTextInput("");
+                                                setTextPosition(null);
+                                                setIsAddingText(false);
+                                              }
+                                            }}
+                                            onBlur={() => {
+                                              if (textInput.trim()) {
+                                                addTextElement(textPosition.x, textPosition.y, textInput);
+                                              } else {
+                                                setTextPosition(null);
+                                                setIsAddingText(false);
+                                              }
+                                            }}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="form-control border-primary"
+                                            style={{
+                                              fontSize: `${textSettings.fontSize}px`,
+                                              fontFamily: textSettings.fontFamily,
+                                              fontWeight: textSettings.fontWeight,
+                                              fontStyle: textSettings.fontStyle,
+                                              color: textSettings.color,
+                                              backgroundColor: textSettings.backgroundColor,
+                                              minWidth: "250px",
+                                              borderWidth: '2px'
+                                            }}
+                                            placeholder="Type your text and press Enter..."
+                                          />
+                                          <span className="input-group-text bg-primary text-white">
+                                            ⌨️
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </>
+                                </div>
+                              ) : (
+                                <img
+                                  src={selectedImage?.content || "/placeholder.svg"}
+                                  alt={selectedImage?.name}
+                                  className="shadow rounded"
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              )}
                             </div>
+
+                            {/* Floating Status Bar */}
+                            {isAnnotating && (
+                              <div className="position-absolute bottom-0 end-0 m-3">
+                                <div className="badge bg-dark text-light px-3 py-2 shadow">
+                                  Tool: <span className="text-info fw-bold">{drawingTool}</span>
+                                  {drawingTool !== "eraser" && (
+                                    <>
+                                      | Color: <span style={{ color: brushColor }}>●</span>
+                                      | Size: {brushRadius}px
+                                    </>
+                                  )}
+                                  {drawingTool === "eraser" && (
+                                    <> | Size: {eraserRadius}px</>
+                                  )}
+                                  | Zoom: {Math.round(zoomLevel * 100)}%
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))}
-
-                    {/* Text Input Field */}
-                    {textPosition && (
-                      <div
-                        className="position-absolute"
-                        style={{
-                          top: textPosition.y,
-                          left: textPosition.x,
-                          zIndex: 20,
-                        }}
-                      >
-                        <div className="input-group shadow-lg">
-                          <input
-                            type="text"
-                            autoFocus
-                            value={textInput}
-                            onChange={(e) => setTextInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" && textInput.trim()) {
-                                addTextElement(textPosition.x, textPosition.y, textInput);
-                              } else if (e.key === "Escape") {
-                                setTextInput("");
-                                setTextPosition(null);
-                                setIsAddingText(false);
-                              }
-                            }}
-                            onBlur={() => {
-                              if (textInput.trim()) {
-                                addTextElement(textPosition.x, textPosition.y, textInput);
-                              } else {
-                                setTextPosition(null);
-                                setIsAddingText(false);
-                              }
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="form-control border-primary"
-                            style={{
-                              fontSize: `${textSettings.fontSize}px`,
-                              fontFamily: textSettings.fontFamily,
-                              fontWeight: textSettings.fontWeight,
-                              fontStyle: textSettings.fontStyle,
-                              color: textSettings.color,
-                              backgroundColor: textSettings.backgroundColor,
-                              minWidth: "250px",
-                              borderWidth: '2px'
-                            }}
-                            placeholder="Type your text and press Enter..."
-                          />
-                          <span className="input-group-text bg-primary text-white">
-                            ⌨️
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="image-preview-container h-100 d-flex align-items-center justify-content-center p-3">
-                    <img
-                      src={selectedImage?.content || "/placeholder.svg"}
-                      alt={selectedImage?.name}
-                      className="img-fluid shadow-lg rounded"
-                      style={{
-                        transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
-                        transformOrigin: "0 0",
-                        maxWidth: "none",
-                        maxHeight: "none",
-                        width: `${canvasWidth}px`,
-                        height: `${canvasHeight}px`,
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Floating Status Bar */}
-              {isAnnotating && (
-                <div className="position-absolute bottom-0 end-0 m-3">
-                  <div className="badge bg-dark text-light px-3 py-2 shadow">
-                    Tool: <span className="text-info fw-bold">{drawingTool}</span>
-                    {drawingTool !== "eraser" && (
-                      <>
-                        | Color: <span style={{ color: brushColor }}>●</span>
-                        | Size: {brushRadius}px
-                      </>
-                    )}
-                    {drawingTool === "eraser" && (
-                      <> | Size: {eraserRadius}px</>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
 
                           {/* Text Editing Modal */}
                           {isEditingText && (
-              <div className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-75"
-                style={{ zIndex: 9999 }}>
-                <div className="bg-white rounded-3 shadow-lg p-4 mx-3" style={{ minWidth: '350px', maxWidth: '90vw' }}>
-                  <div className="d-flex align-items-center gap-2 mb-3">
-                    <div className="bg-primary text-white rounded-circle p-2">
-                      <MdPinEnd />
-                    </div>
-                    <h5 className="mb-0 text-primary fw-bold">Edit Text</h5>
-                  </div>
-                  <div className="mb-3">
-                    <input
-                      ref={editTextInputRef}
-                      type="text"
-                      value={editingTextValue}
-                      onChange={(e) => setEditingTextValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          saveTextEdit();
-                        } else if (e.key === "Escape") {
-                          cancelTextEdit();
-                        }
-                      }}
-                      className="form-control form-control-lg border-primary"
-                      placeholder="Enter your text..."
-                    />
-                  </div>
-                  <div className="d-flex gap-2 justify-content-end">
-                    <button className="btn btn-success px-4" onClick={saveTextEdit}>
-                      <MdPinEnd className="me-1" /> Save
-                    </button>
-                    <button className="btn btn-outline-secondary px-4" onClick={cancelTextEdit}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+  <div
+    className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-75"
+    style={{ zIndex: 9999 }}
+  >
+    <div
+      className="bg-white rounded-3 shadow-lg p-4 mx-3"
+      style={{ minWidth: "350px", maxWidth: "90vw" }}
+    >
+      <div className="d-flex align-items-center gap-2 mb-3">
+        <div className="bg-primary text-white rounded-circle p-2">
+          <MdPinEnd />
+        </div>
+        <h5 className="mb-0 text-primary fw-bold">Edit Text</h5>
+      </div>
+      {/* Text Content Input */}
+      <div className="mb-3">
+        <label className="form-label text-black small">Text Content</label>
+        <input
+          ref={editTextInputRef}
+          type="text"
+          value={editingTextValue}
+          onChange={(e) => setEditingTextValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && editingTextValue.trim()) {
+              saveTextEdit();
+            } else if (e.key === "Escape") {
+              cancelTextEdit();
+            }
+          }}
+          className="form-control form-control-lg border-primary"
+          placeholder="Enter your text..."
+          style={{
+            fontSize: `${textSettings.fontSize}px`,
+            fontFamily: textSettings.fontFamily,
+            fontWeight: textSettings.fontWeight,
+            fontStyle: textSettings.fontStyle,
+            color: textSettings.color,
+          }}
+        />
+      </div>
+      {/* Text Settings Section */}
+      <div className="mb-3">
+        <h6 className="text-black mb-3 d-flex align-items-center gap-2">
+          <MdPinEnd className="text-warning" /> Text Settings
+        </h6>
+        <div className="d-flex flex-column gap-3">
+          <div>
+            <label className="form-label text-black small">Text Color</label>
+            <input
+              type="color"
+              value={textSettings.color}
+              onChange={(e) =>
+                setTextSettings((prev) => ({ ...prev, color: e.target.value }))
+              }
+              className="form-control border form-control-color w-100"
+              style={{ height: "40px" }}
+            />
+          </div>
+          <div>
+            <label className="form-label text-black small">
+              Font Size: {textSettings.fontSize}px
+            </label>
+            <input
+              type="range"
+              min="12"
+              max="48"
+              value={textSettings.fontSize}
+              onChange={(e) =>
+                setTextSettings((prev) => ({
+                  ...prev,
+                  fontSize: Number.parseInt(e.target.value),
+                }))
+              }
+              className="form-range"
+            />
+          </div>
+          <div>
+            <label className="form-label text-black small">Font Family</label>
+            <select
+              value={textSettings.fontFamily}
+              onChange={(e) =>
+                setTextSettings((prev) => ({ ...prev, fontFamily: e.target.value }))
+              }
+              className="form-select form-select-sm text-black border-secondary"
+            >
+              <option value="Arial">Arial</option>
+              <option value="Helvetica">Helvetica</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Courier New">Courier New</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div className="d-flex gap-2 justify-content-end">
+        <button
+          className="btn btn-success px-4"
+          onClick={saveTextEdit}
+          disabled={!editingTextValue.trim()}
+        >
+          <MdPinEnd className="me-1" /> Save
+        </button>
+        <button className="btn btn-outline-secondary px-4" onClick={cancelTextEdit}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
                         </div>
                       )}
                     </Modal.Body>
