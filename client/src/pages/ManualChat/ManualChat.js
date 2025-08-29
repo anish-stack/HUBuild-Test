@@ -91,8 +91,8 @@ const ManualChat = () => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   // Add state for dynamic canvas dimensions
-  const [canvasWidth, setCanvasWidth] = useState(800);
-  const [canvasHeight, setCanvasHeight] = useState(600);
+  const [originalWidth, setOriginalWidth] = useState(800);
+  const [originalHeight, setOriginalHeight] = useState(600);
 
   // Add new state for unified history
   const [annotationHistory, setAnnotationHistory] = useState([]);
@@ -145,8 +145,8 @@ const ManualChat = () => {
         const newZoom = Math.min(zoomToFitWidth, zoomToFitHeight, 1);
 
         // Set canvas dimensions to image's natural size
-        setCanvasWidth(imgWidth);
-        setCanvasHeight(imgHeight);
+        setOriginalWidth(imgWidth);
+        setOriginalHeight(imgHeight);
 
         // Center the image
         const scaledWidth = imgWidth * newZoom;
@@ -159,8 +159,8 @@ const ManualChat = () => {
       };
       img.onerror = () => {
         console.error("Failed to load image for sizing");
-        setCanvasWidth(800);
-        setCanvasHeight(600);
+        setOriginalWidth(800);
+        setOriginalHeight(600);
         const container = containerRef.current;
         const rect = container.getBoundingClientRect();
         const offsetX = (rect.width - 800) / 2;
@@ -227,6 +227,7 @@ const ManualChat = () => {
         canvas: canvasData,
         textElements: [...textElements],
         shapes: [...shapes],
+        zoom: zoomLevel,
       };
 
       // Only add to history if the state has changed
@@ -652,12 +653,12 @@ const ManualChat = () => {
   const resetZoom = useCallback(() => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      const offsetX = (rect.width - canvasWidth) / 2;
-      const offsetY = (rect.height - canvasHeight) / 2;
+      const offsetX = (rect.width - originalWidth) / 2;
+      const offsetY = (rect.height - originalHeight) / 2;
       setPanOffset({ x: offsetX, y: offsetY });
     }
     setZoomLevel(1);
-  }, [canvasWidth, canvasHeight]);
+  }, [originalWidth, originalHeight]);
 
   // Pan functionality
   const handleMouseDown = useCallback((e) => {
@@ -690,48 +691,54 @@ const ManualChat = () => {
 
   // Shape drawing functions
   const drawShape = useCallback((ctx, shape) => {
+    const scaledStartX = shape.startX * zoomLevel;
+    const scaledStartY = shape.startY * zoomLevel;
+    const scaledEndX = shape.endX * zoomLevel;
+    const scaledEndY = shape.endY * zoomLevel;
+    const scaledRadius = shape.radius * zoomLevel;
+
     ctx.strokeStyle = shape.color;
-    ctx.lineWidth = shape.radius;
+    ctx.lineWidth = scaledRadius;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 
     switch (shape.type) {
       case "rectangle":
-        ctx.strokeRect(shape.startX, shape.startY, shape.endX - shape.startX, shape.endY - shape.startY);
+        ctx.strokeRect(scaledStartX, scaledStartY, scaledEndX - scaledStartX, scaledEndY - scaledStartY);
         break;
       case "circle":
-        const radius = Math.sqrt(Math.pow(shape.endX - shape.startX, 2) + Math.pow(shape.endY - shape.startY, 2));
+        const radius = Math.sqrt(Math.pow(scaledEndX - scaledStartX, 2) + Math.pow(scaledEndY - scaledStartY, 2));
         ctx.beginPath();
-        ctx.arc(shape.startX, shape.startY, radius, 0, 2 * Math.PI);
+        ctx.arc(scaledStartX, scaledStartY, radius, 0, 2 * Math.PI);
         ctx.stroke();
         break;
       case "arrow":
-        const headlen = 10;
-        const dx = shape.endX - shape.startX;
-        const dy = shape.endY - shape.startY;
+        const headlen = 10 * zoomLevel;
+        const dx = scaledEndX - scaledStartX;
+        const dy = scaledEndY - scaledStartY;
         const angle = Math.atan2(dy, dx);
         ctx.beginPath();
-        ctx.moveTo(shape.startX, shape.startY);
-        ctx.lineTo(shape.endX, shape.endY);
+        ctx.moveTo(scaledStartX, scaledStartY);
+        ctx.lineTo(scaledEndX, scaledEndY);
         ctx.lineTo(
-          shape.endX - headlen * Math.cos(angle - Math.PI / 6),
-          shape.endY - headlen * Math.sin(angle - Math.PI / 6)
+          scaledEndX - headlen * Math.cos(angle - Math.PI / 6),
+          scaledEndY - headlen * Math.sin(angle - Math.PI / 6)
         );
-        ctx.moveTo(shape.endX, shape.endY);
+        ctx.moveTo(scaledEndX, scaledEndY);
         ctx.lineTo(
-          shape.endX - headlen * Math.cos(angle + Math.PI / 6),
-          shape.endY - headlen * Math.sin(angle + Math.PI / 6)
+          scaledEndX - headlen * Math.cos(angle + Math.PI / 6),
+          scaledEndY - headlen * Math.sin(angle + Math.PI / 6)
         );
         ctx.stroke();
         break;
       case "line":
         ctx.beginPath();
-        ctx.moveTo(shape.startX, shape.startY);
-        ctx.lineTo(shape.endX, shape.endY);
+        ctx.moveTo(scaledStartX, scaledStartY);
+        ctx.lineTo(scaledEndX, scaledEndY);
         ctx.stroke();
         break;
     }
-  }, []);
+  }, [zoomLevel]);
 
   const renderShapes = useCallback(() => {
     const canvas = shapeCanvasRef.current;
@@ -772,10 +779,8 @@ const ManualChat = () => {
       if (isAddingText) {
         const canvas = e.currentTarget;
         const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        const x = (e.clientX - rect.left) * scaleX;
-        const y = (e.clientY - rect.top) * scaleY;
+        const x = (e.clientX - rect.left) / zoomLevel;
+        const y = (e.clientY - rect.top) / zoomLevel;
         setTextPosition({ x, y });
         e.stopPropagation();
       }
@@ -788,27 +793,26 @@ const ManualChat = () => {
     (e) => {
       const canvas = e.currentTarget;
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      const x = (e.clientX - rect.left) * scaleX;
-      const y = (e.clientY - rect.top) * scaleY;
+      const visual_x = e.clientX - rect.left;
+      const visual_y = e.clientY - rect.top;
+      const logical_x = visual_x / zoomLevel;
+      const logical_y = visual_y / zoomLevel;
 
       if (drawingTool === "eraser") {
         setIsDrawing(true); // Start continuous erasing
         if (canvasRef.current) {
-          // Erase brush strokes on CanvasDraw
           const drawingCanvas = canvasRef.current.canvas.drawing;
           const ctx = drawingCanvas.getContext("2d");
           ctx.save();
           ctx.beginPath();
-          ctx.arc(x, y, eraserRadius, 0, 2 * Math.PI);
+          ctx.arc(visual_x, visual_y, eraserRadius, 0, 2 * Math.PI);
           ctx.clip();
-          ctx.clearRect(x - eraserRadius, y - eraserRadius, eraserRadius * 2, eraserRadius * 2);
+          ctx.clearRect(visual_x - eraserRadius, visual_y - eraserRadius, eraserRadius * 2, eraserRadius * 2);
           ctx.restore();
         }
 
         // Erase shapes
-        const collidingShapes = checkShapeCollision(x, y, eraserRadius);
+        const collidingShapes = checkShapeCollision(logical_x, logical_y, eraserRadius / zoomLevel);
         if (collidingShapes.length > 0) {
           let topIndex = -1;
           let topShape = null;
@@ -827,19 +831,19 @@ const ManualChat = () => {
         }
       } else if (["rectangle", "circle", "arrow", "line"].includes(drawingTool)) {
         setIsDrawingShape(true);
-        setShapeStart({ x, y });
+        setShapeStart({ x: logical_x, y: logical_y });
         setCurrentShape({
           type: drawingTool,
-          startX: x,
-          startY: y,
-          endX: x,
-          endY: y,
+          startX: logical_x,
+          startY: logical_y,
+          endX: logical_x,
+          endY: logical_y,
           color: brushColor,
-          radius: brushRadius,
+          radius: brushRadius / zoomLevel,
         });
       }
     },
-    [drawingTool, brushColor, brushRadius, eraserRadius, checkShapeCollision, shapes, saveAnnotationState]
+    [drawingTool, brushColor, brushRadius, eraserRadius, checkShapeCollision, shapes, saveAnnotationState, zoomLevel]
   );
 
   // Modified handleShapeMouseMove to handle continuous erasing
@@ -847,16 +851,16 @@ const ManualChat = () => {
     (e) => {
       const canvas = e.currentTarget;
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      const x = (e.clientX - rect.left) * scaleX;
-      const y = (e.clientY - rect.top) * scaleY;
+      const visual_x = e.clientX - rect.left;
+      const visual_y = e.clientY - rect.top;
+      const logical_x = visual_x / zoomLevel;
+      const logical_y = visual_y / zoomLevel;
 
       if (isDrawingShape && shapeStart) {
         setCurrentShape((prev) => ({
           ...prev,
-          endX: x,
-          endY: y,
+          endX: logical_x,
+          endY: logical_y,
         }));
       } else if (drawingTool === "eraser" && isDrawing) {
         // Continuous erasing for brush strokes
@@ -865,14 +869,14 @@ const ManualChat = () => {
           const ctx = drawingCanvas.getContext("2d");
           ctx.save();
           ctx.beginPath();
-          ctx.arc(x, y, eraserRadius, 0, 2 * Math.PI);
+          ctx.arc(visual_x, visual_y, eraserRadius, 0, 2 * Math.PI);
           ctx.clip();
-          ctx.clearRect(x - eraserRadius, y - eraserRadius, eraserRadius * 2, eraserRadius * 2);
+          ctx.clearRect(visual_x - eraserRadius, visual_y - eraserRadius, eraserRadius * 2, eraserRadius * 2);
           ctx.restore();
         }
 
         // Continuous erasing for shapes
-        const collidingShapes = checkShapeCollision(x, y, eraserRadius);
+        const collidingShapes = checkShapeCollision(logical_x, logical_y, eraserRadius / zoomLevel);
         if (collidingShapes.length > 0) {
           let topIndex = -1;
           let topShape = null;
@@ -891,7 +895,7 @@ const ManualChat = () => {
         }
       }
     },
-    [isDrawingShape, shapeStart, drawingTool, eraserRadius, checkShapeCollision, shapes, isDrawing, saveAnnotationState]
+    [isDrawingShape, shapeStart, drawingTool, eraserRadius, checkShapeCollision, shapes, isDrawing, saveAnnotationState, zoomLevel]
   );
 
   const handleShapeMouseUp = useCallback(() => {
@@ -921,10 +925,8 @@ const ManualChat = () => {
       if (!canvas) return;
 
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      const canvasX = (e.clientX - rect.left) * scaleX;
-      const canvasY = (e.clientY - rect.top) * scaleY;
+      const canvasX = (e.clientX - rect.left) / zoomLevel;
+      const canvasY = (e.clientY - rect.top) / zoomLevel;
 
       const offsetX = canvasX - textElement.x;
       const offsetY = canvasY - textElement.y;
@@ -937,15 +939,13 @@ const ManualChat = () => {
         if (!canvas) return;
 
         const canvasRect = canvas.getBoundingClientRect();
-        const moveScaleX = canvas.width / canvasRect.width;
-        const moveScaleY = canvas.height / canvasRect.height;
-        const newCanvasX = (moveEvent.clientX - canvasRect.left) * moveScaleX;
-        const newCanvasY = (moveEvent.clientY - canvasRect.top) * moveScaleY;
+        const newCanvasX = (moveEvent.clientX - canvasRect.left) / zoomLevel;
+        const newCanvasY = (moveEvent.clientY - canvasRect.top) / zoomLevel;
 
-        const newX = Math.max(0, Math.min(canvas.width - 100, newCanvasX - offsetX));
+        const newX = Math.max(0, Math.min(originalWidth - 100, newCanvasX - offsetX));
         const newY = Math.max(
           textElement.fontSize,
-          Math.min(canvas.height - textElement.fontSize, newCanvasY - offsetY)
+          Math.min(originalHeight - textElement.fontSize, newCanvasY - offsetY)
         );
 
         updateTextElement(textId, { x: newX, y: newY });
@@ -960,7 +960,7 @@ const ManualChat = () => {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
-    [textElements, updateTextElement]
+    [textElements, updateTextElement, zoomLevel, originalWidth, originalHeight]
   );
 
   // Text Double Click Handler for Editing
@@ -1028,8 +1028,8 @@ const ManualChat = () => {
       const textCanvas = textCanvasRef.current;
       const shapeCanvas = shapeCanvasRef.current;
 
-      const width = canvasWidth; // Use dynamic width
-      const height = canvasHeight; // Use dynamic height
+      const width = originalWidth; // Use dynamic width
+      const height = originalHeight; // Use dynamic height
 
       // Create merged canvas
       const mergedCanvas = document.createElement("canvas");
@@ -1169,7 +1169,18 @@ const ManualChat = () => {
     if (canvasRef.current) {
       if (previousState.canvas) {
         try {
-          canvasRef.current.loadSaveData(previousState.canvas, true);
+          let saveData = JSON.parse(previousState.canvas);
+          if (saveData) {
+            const scaleFactor = zoomLevel / previousState.zoom;
+            saveData.lines.forEach((line) => {
+              line.points.forEach((p) => {
+                p.x *= scaleFactor;
+                p.y *= scaleFactor;
+              });
+              line.brushRadius *= scaleFactor;
+            });
+            canvasRef.current.loadSaveData(JSON.stringify(saveData), true);
+          }
         } catch (error) {
           console.error("Failed to restore canvas:", error);
           canvasRef.current.clear();
@@ -1182,7 +1193,7 @@ const ManualChat = () => {
     setTextElements([...previousState.textElements]);
     setShapes([...previousState.shapes]);
     setAnnotationHistoryIndex(previousIndex);
-  }, [annotationHistory, annotationHistoryIndex]);
+  }, [annotationHistory, annotationHistoryIndex, zoomLevel]);
 
   // Add handleRedo to restore undone steps
   const handleRedo = useCallback(() => {
@@ -1196,7 +1207,18 @@ const ManualChat = () => {
     if (canvasRef.current) {
       if (nextState.canvas) {
         try {
-          canvasRef.current.loadSaveData(nextState.canvas, true);
+          let saveData = JSON.parse(nextState.canvas);
+          if (saveData) {
+            const scaleFactor = zoomLevel / nextState.zoom;
+            saveData.lines.forEach((line) => {
+              line.points.forEach((p) => {
+                p.x *= scaleFactor;
+                p.y *= scaleFactor;
+              });
+              line.brushRadius *= scaleFactor;
+            });
+            canvasRef.current.loadSaveData(JSON.stringify(saveData), true);
+          }
         } catch (error) {
           console.error("Failed to restore canvas:", error);
           canvasRef.current.clear();
@@ -1209,7 +1231,7 @@ const ManualChat = () => {
     setTextElements([...nextState.textElements]);
     setShapes([...nextState.shapes]);
     setAnnotationHistoryIndex(nextIndex);
-  }, [annotationHistory, annotationHistoryIndex]);
+  }, [annotationHistory, annotationHistoryIndex, zoomLevel]);
 
   // Handle click outside text elements to unselect
   const handleCanvasWrapperClick = useCallback(
@@ -1876,7 +1898,7 @@ const ManualChat = () => {
         return;
       }
 
-      if (!validateMessageContent(trimmedMessage)) {
+      if (!validateMessageContent(trimmedMessage) ) {
         toast.error("Your message contains prohibited content");
         return;
       }
@@ -2641,11 +2663,12 @@ const ManualChat = () => {
                                 <div
                                   className="canvas-container position-relative"
                                   style={{
-                                    transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`,
-                                    transformOrigin: "0 0",
+                                    position: 'absolute',
+                                    left: `${panOffset.x}px`,
+                                    top: `${panOffset.y}px`,
+                                    width: `${originalWidth * zoomLevel}px`,
+                                    height: `${originalHeight * zoomLevel}px`,
                                     cursor: isPanning ? "grabbing" : (isAnnotating ? (drawingTool === "eraser" ? getEraserCursor() : "default") : "grab"),
-                                    width: `${canvasWidth}px`,
-                                    height: `${canvasHeight}px`,
                                   }}
                                 >
                                   <>
@@ -2653,56 +2676,21 @@ const ManualChat = () => {
                                     <CanvasDraw
                                       ref={canvasRef}
                                       imgSrc={selectedImage?.content}
-                                      canvasWidth={canvasWidth}
-                                      canvasHeight={canvasHeight}
+                                      canvasWidth={originalWidth * zoomLevel}
+                                      canvasHeight={originalHeight * zoomLevel}
                                       loadTimeOffset={10}
                                       brushRadius={drawingTool === "eraser" ? eraserRadius : brushRadius}
                                       brushColor={drawingTool === "eraser" ? "#FFFFFF" : brushColor}
                                       lazyRadius={0}
                                       className="shadow rounded"
-                                      disabled={!["brush", "eraser"].includes(drawingTool)}
-                                      onMouseDown={(e) => {
-                                        if (["brush", "eraser"].includes(drawingTool) && canvasRef.current) {
-                                          const { x, y } = getAdjustedMousePosition(e);
-                                          const ctx = canvasRef.current.canvas.drawing.getContext("2d");
-                                          ctx.beginPath();
-                                          ctx.moveTo(x, y);
-                                          setIsDrawing(true);
-                                        }
-                                      }}
-                                      onMouseMove={(e) => {
-                                        if (isDrawing && ["brush", "eraser"].includes(drawingTool) && canvasRef.current) {
-                                          const { x, y } = getAdjustedMousePosition(e);
-                                          const ctx = canvasRef.current.canvas.drawing.getContext("2d");
-                                          ctx.lineTo(x, y);
-                                          ctx.strokeStyle = drawingTool === "eraser" ? "#FFFFFF" : brushColor;
-                                          ctx.lineWidth = drawingTool === "eraser" ? eraserRadius * 2 : brushRadius * 2;
-                                          ctx.lineCap = "round";
-                                          ctx.lineJoin = "round";
-                                          ctx.stroke();
-                                        }
-                                      }}
-                                      onMouseUp={() => {
-                                        if (isDrawing && ["brush", "eraser"].includes(drawingTool) && canvasRef.current) {
-                                          canvasRef.current.canvas.drawing.getContext("2d").closePath();
-                                          saveAnnotationState();
-                                          setIsDrawing(false);
-                                        }
-                                      }}
-                                      onMouseLeave={() => {
-                                        if (isDrawing && ["brush", "eraser"].includes(drawingTool) && canvasRef.current) {
-                                          canvasRef.current.canvas.drawing.getContext("2d").closePath();
-                                          saveAnnotationState();
-                                          setIsDrawing(false);
-                                        }
-                                      }}
+                                      disabled={drawingTool !== "brush"}
                                     />
 
                                     {/* Shape Canvas */}
                                     <canvas
                                       ref={shapeCanvasRef}
-                                      width={canvasWidth}
-                                      height={canvasHeight}
+                                      width={originalWidth * zoomLevel}
+                                      height={originalHeight * zoomLevel}
                                       className="position-absolute top-0 start-0 shadow rounded"
                                       style={{
                                         pointerEvents: ["rectangle", "circle", "arrow", "line", "eraser"].includes(drawingTool)
@@ -2718,8 +2706,8 @@ const ManualChat = () => {
                                     {/* Text Overlay Canvas */}
                                     <canvas
                                       ref={textCanvasRef}
-                                      width={canvasWidth}
-                                      height={canvasHeight}
+                                      width={originalWidth * zoomLevel}
+                                      height={originalHeight * zoomLevel}
                                       className="position-absolute top-0 start-0"
                                       style={{
                                         pointerEvents: isAddingText ? "auto" : "none",
@@ -2735,16 +2723,16 @@ const ManualChat = () => {
                                         key={element.id}
                                         className={`text-element position-absolute user-select-none ${selectedTextId === element.id ? 'selected' : ''}`}
                                         style={{
-                                          left: element.x,
-                                          top: element.y,
-                                          fontSize: `${element.fontSize}px`,
+                                          left: element.x * zoomLevel,
+                                          top: element.y * zoomLevel,
+                                          fontSize: `${element.fontSize * zoomLevel}px`,
                                           fontFamily: element.fontFamily,
                                           fontWeight: element.fontWeight,
                                           fontStyle: element.fontStyle,
                                           textDecoration: element.textDecoration,
                                           color: element.color,
                                           backgroundColor: element.backgroundColor,
-                                          padding: `${element.padding}px`,
+                                          padding: `${element.padding * zoomLevel}px`,
                                           cursor: isDragging ? "grabbing" : "grab",
                                           zIndex: element.zIndex + 10,
                                           transform: `rotate(${element.rotation || 0}deg)`,
@@ -2754,7 +2742,7 @@ const ManualChat = () => {
                                             : "1px solid transparent",
                                           borderRadius: "6px",
                                           minWidth: "20px",
-                                          minHeight: `${element.fontSize}px`,
+                                          minHeight: `${element.fontSize * zoomLevel}px`,
                                           boxShadow: selectedTextId === element.id
                                             ? "0 0 0 0.25rem rgba(13, 110, 253, 0.25)"
                                             : "0 0.25rem 0.5rem rgba(0,0,0,0.1)",
@@ -2805,8 +2793,8 @@ const ManualChat = () => {
                                       <div
                                         className="position-absolute"
                                         style={{
-                                          top: textPosition.y,
-                                          left: textPosition.x,
+                                          top: textPosition.y * zoomLevel,
+                                          left: textPosition.x * zoomLevel,
                                           zIndex: 20,
                                         }}
                                       >
@@ -2836,7 +2824,7 @@ const ManualChat = () => {
                                             onClick={(e) => e.stopPropagation()}
                                             className="form-control border-primary"
                                             style={{
-                                              fontSize: `${textSettings.fontSize}px`,
+                                              fontSize: `${textSettings.fontSize * zoomLevel}px`,
                                               fontFamily: textSettings.fontFamily,
                                               fontWeight: textSettings.fontWeight,
                                               fontStyle: textSettings.fontStyle,
