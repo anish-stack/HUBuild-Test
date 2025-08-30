@@ -34,7 +34,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { Modal, Dropdown } from "react-bootstrap"
 import "bootstrap/dist/css/bootstrap.min.css"
 import CanvasDraw from "react-canvas-draw"
-import { Pencil, Type } from "lucide-react"
+import { Pencil, Hand } from "lucide-react"
 import VoiceRecorder from "./VoiceRecorder"; // Adjust the path as needed
 
 const ENDPOINT = "https://testapi.dessobuild.com/"
@@ -650,6 +650,22 @@ const ManualChat = () => {
     [handleZoom]
   );
 
+  const handleFitToScreen = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const containerWidth = rect.width;
+      const containerHeight = rect.height;
+      const zoomToFitHeight = (containerHeight - 20) / originalHeight;
+      const newZoom = Math.min(zoomToFitHeight, 5);
+      const scaledWidth = originalWidth * newZoom;
+      const scaledHeight = originalHeight * newZoom;
+      const offsetY = (containerHeight - scaledHeight) / 2;
+      const offsetX = scaledWidth < containerWidth ? (containerWidth - scaledWidth) / 2 : 0;
+      setZoomLevel(newZoom);
+      setPanOffset({ x: offsetX, y: offsetY });
+    }
+  }, [originalWidth, originalHeight]);
+
   const resetZoom = useCallback(() => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
@@ -662,13 +678,13 @@ const ManualChat = () => {
 
   // Pan functionality
   const handleMouseDown = useCallback((e) => {
-    if (e.button === 1 || (e.button === 0 && (e.ctrlKey || !isAnnotating))) {
-      // Middle mouse or Ctrl+Left click or Left click in preview mode
+    if (e.button === 1 || (e.button === 0 && (e.ctrlKey || !isAnnotating || drawingTool === "pan"))) {
+      // Middle mouse or Ctrl+Left click or Left click in preview mode or pan mode
       setIsPanning(true);
       setLastPanPoint({ x: e.clientX, y: e.clientY });
       e.preventDefault();
     }
-  }, [isAnnotating]);
+  }, [isAnnotating, drawingTool]);
 
   const handleMouseMove = useCallback(
     (e) => {
@@ -2378,7 +2394,7 @@ const ManualChat = () => {
                                   // Optional: Reset zoom when entering annotation mode
                                   resetZoom();
                                 }}
-                                className="btn btn-light btn-sm align-items-center gap-1"
+                                className="btn btn-light btn-sm btn-sm align-items-center gap-1"
                                 style={{ display: 'flex' }}
                               >
                                 <MdBrush className="fs-6" />
@@ -2437,76 +2453,92 @@ const ManualChat = () => {
                           {/* Tools Panel - Left Sidebar on Desktop, Top on Mobile */}
                           {isAnnotating && (
                             <div className="tools-panel text-white p-3 order-1 tool-height order-lg-0"
-                              style={{ minWidth: '300px', overflowY: 'auto' }}>
+                              style={{ minWidth: "300px", overflowY: 'auto' }}>
 
                               {/* Drawing Tools Section */}
                               <div className="mb-4">
-                                <h6 style={{ display: 'flex' }} className="text-black mb-3 align-items-center gap-2">
-                                  <MdBrush className="text-info" /> Drawing Tools
-                                </h6>
-                                <div style={{ display: 'flex' }} className="gap-1">
-                                  <div className="">
-                                    <button
-                                      className={`btn align-items-center gap-2 ${drawingTool === "brush" ? "btn-info text-dark" : "btn-outline-info"}`}
-                                      onClick={() => setDrawingTool("brush")}
-                                      style={{ display: 'flex' }}
-                                      title="Brush Tool - Draw freehand"
-                                    >
-                                      <MdBrush />
-                                    </button>
-                                  </div>
-                                  <div className="">
-                                    <button
-                                      className={`btn align-items-center gap-2 ${drawingTool === "eraser" ? "btn-info text-dark" : "btn-outline-info"}`}
-                                      onClick={() => setDrawingTool("eraser")}
-                                      style={{ display: 'flex' }}
-                                      title="Eraser Tool - Remove drawings"
-                                    >
-                                      <MdClear />
-                                    </button>
-                                  </div>
-                                  <div className="">
-                                    <button
-                                      className={`btn align-items-center gap-2 ${drawingTool === "rectangle" ? "btn-info text-dark" : "btn-outline-info"}`}
-                                      onClick={() => setDrawingTool("rectangle")}
-                                      style={{ display: 'flex' }}
-                                      title="Rectangle Tool - Draw rectangles"
-                                    >
-                                      <MdRectangle />
-                                    </button>
-                                  </div>
-                                  <div className="">
-                                    <button
-                                      className={`btn align-items-center gap-2 ${drawingTool === "circle" ? "btn-info text-dark" : "btn-outline-info"}`}
-                                      onClick={() => setDrawingTool("circle")}
-                                      style={{ display: 'flex' }}
-                                      title="Circle Tool - Draw circles"
-                                    >
-                                      <MdCircle />
-                                    </button>
-                                  </div>
-                                  <div className="">
-                                    <button
-                                      className={`btn align-items-center gap-2 ${drawingTool === "arrow" ? "btn-info text-dark" : "btn-outline-info"}`}
-                                      onClick={() => setDrawingTool("arrow")}
-                                      style={{ display: 'flex' }}
-                                      title="Arrow Tool - Draw arrows"
-                                    >
-                                      <MdArrowForward />
-                                    </button>
-                                  </div>
-                                  <div className="">
-                                    <button
-                                      className={`btn align-items-center gap-2 ${isAddingText ? "btn-info text-dark" : "btn-outline-info"}`}
-                                      onClick={() => setIsAddingText(!isAddingText)}
-                                      style={{ display: 'flex' }}
-                                      title="Text Tool - Add text"
-                                    >
-                                      <TfiText />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
+  <h6 style={{ display: 'flex' }} className="text-black mb-3 align-items-center gap-2">
+    <MdBrush className="text-info" /> Drawing Tools
+  </h6>
+
+  {/* First Row */}
+  <div style={{ display: 'flex' }} className="gap-2 mb-2">
+    <button
+      className={`btn ${drawingTool === "brush" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("brush"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Brush Tool - Draw freehand"
+    >
+      <MdBrush />
+    </button>
+
+    <button
+      className={`btn ${drawingTool === "eraser" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("eraser"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Eraser Tool - Remove drawings"
+    >
+      <MdClear />
+    </button>
+
+    <button
+      className={`btn ${drawingTool === "rectangle" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("rectangle"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Rectangle Tool - Draw rectangles"
+    >
+      <MdRectangle />
+    </button>
+
+    <button
+      className={`btn ${drawingTool === "circle" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("circle"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Circle Tool - Draw circles"
+    >
+      <MdCircle />
+    </button>
+  </div>
+
+  {/* Second Row */}
+  <div style={{ display: 'flex' }} className="gap-2">
+    <button
+      className={`btn ${drawingTool === "arrow" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("arrow"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Arrow Tool - Draw arrows"
+    >
+      <MdArrowForward />
+    </button>
+
+    <button
+      className={`btn ${drawingTool === "text" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => {
+        if (isAddingText) {
+          setIsAddingText(false);
+          setDrawingTool("brush");
+        } else {
+          setIsAddingText(true);
+          setDrawingTool("text");
+        }
+      }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Text Tool - Add text"
+    >
+      <TfiText />
+    </button>
+
+    <button
+      className={`btn ${drawingTool === "pan" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("pan"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Pan Tool - Drag to move"
+    >
+      <Hand />
+    </button>
+  </div>
+</div>
+
 
                               {/* Brush Settings */}
                               <div className="mb-4">
@@ -2631,7 +2663,14 @@ const ManualChat = () => {
                                   <button
                                     className="btn btn-outline-primary btn-sm"
                                     onClick={resetZoom}
-                                    title="Reset Zoom"
+                                    title="Reset to 100%"
+                                  >
+                                    <MdUndo size={20} />
+                                  </button>
+                                  <button
+                                    className="btn btn-outline-primary btn-sm"
+                                    onClick={handleFitToScreen}
+                                    title="Fit to Screen"
                                   >
                                     <MdCenterFocusWeak size={20} />
                                   </button>
@@ -2668,7 +2707,7 @@ const ManualChat = () => {
                                     top: `${panOffset.y}px`,
                                     width: `${originalWidth * zoomLevel}px`,
                                     height: `${originalHeight * zoomLevel}px`,
-                                    cursor: isPanning ? "grabbing" : (isAnnotating ? (drawingTool === "eraser" ? getEraserCursor() : "default") : "grab"),
+                                    cursor: isPanning ? "grabbing" : (drawingTool === "pan" ? "grab" : (isAddingText ? "crosshair" : (drawingTool === "eraser" ? getEraserCursor() : "default"))),
                                   }}
                                 >
                                   <>
