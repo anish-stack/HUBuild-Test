@@ -38,7 +38,10 @@ const UserDashboard = () => {
   const GetToken = () => {
     const data = GetData('token');
     const user = GetData('user');
+<<<<<<< HEAD
     console.log("user",user)
+=======
+>>>>>>> ff81937 (new)
     const UserData = JSON.parse(user);
     if (data) {
       setToken(data);
@@ -48,22 +51,35 @@ const UserDashboard = () => {
     } else {
       // Clear any remaining data and redirect to login
       localStorage.clear();
+<<<<<<< HEAD
       window.location.href = '/login'; // adjust path as per your routes
     }
   };
 
   // console.log("token ",providerId)
 
+=======
+      window.location.href = '/login';
+    }
+  };
+
+>>>>>>> ff81937 (new)
   const GetMyProfile = async () => {
     if (!token) return;
     setLoading(true);
     try {
       const { data } = await axios.get(`https://testapi.dessobuild.com/api/v1/get-single-provider/${providerId}`);
+<<<<<<< HEAD
       console.log(data)
       setMyProfile(data.data);
       setMobileNumber(data.data.mobileNumber)
       const formattedAmount = data.data.walletAmount.toFixed(2);
 
+=======
+      setMyProfile(data.data);
+      setMobileNumber(data.data.mobileNumber)
+      const formattedAmount = data.data.walletAmount.toFixed(2);
+>>>>>>> ff81937 (new)
       setWalletAmount(formattedAmount);
       setLoading(false);
     } catch (error) {
@@ -77,7 +93,10 @@ const UserDashboard = () => {
 
   const handleFetchProvider = async () => {
     try {
+<<<<<<< HEAD
       // console.log("providerId",providerId)
+=======
+>>>>>>> ff81937 (new)
       const { data } = await axios.get(
         `https://testapi.dessobuild.com/api/v1/get-single-provider/${providerId}`
       );
@@ -85,7 +104,10 @@ const UserDashboard = () => {
       setStatuses({
         chatStatus: allData.chatStatus || '',
         callStatus: allData.callStatus || '',
+<<<<<<< HEAD
 
+=======
+>>>>>>> ff81937 (new)
       });
     } catch (error) {
       console.log('Error fetching provider data', error);
@@ -109,6 +131,7 @@ const UserDashboard = () => {
           title: "Success!",
           text: `${response.data.message}`,
         })
+<<<<<<< HEAD
 
       } else {
         // toast.error('Failed to update status');
@@ -130,20 +153,49 @@ const UserDashboard = () => {
         confirmButtonText: 'Okay'
       });
       setStatuses(previousStatuses); // Revert to previous state on failure
+=======
+      } else {
+        Swal.fire({
+          title: 'Error!',
+          text: 'Failed to update status',
+          icon: 'error',
+          confirmButtonText: 'Okay'
+        });
+        setStatuses(previousStatuses);
+      }
+    } catch (error) {
+      console.log('Internal server error', error);
+      Swal.fire({
+        title: 'Error!',
+        text: 'Error updating status',
+        icon: 'error',
+        confirmButtonText: 'Okay'
+      });
+      setStatuses(previousStatuses);
+>>>>>>> ff81937 (new)
     }
   };
 
   const onDrop = (acceptedFiles) => {
     setFiles([...files, ...acceptedFiles]);
   };
+<<<<<<< HEAD
+=======
+  
+>>>>>>> ff81937 (new)
   useEffect(() => {
     GetToken();
   }, []);
 
   useEffect(() => {
     if (token) {
+<<<<<<< HEAD
       GetMyProfile(); // Fetch profile only if token exists
       handleFetchProvider(); // Fetch profile only if token exists
+=======
+      GetMyProfile();
+      handleFetchProvider();
+>>>>>>> ff81937 (new)
     }
   }, [token]);
 
@@ -166,6 +218,7 @@ const UserDashboard = () => {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`,
         },
+<<<<<<< HEAD
 
       });
       // toast.success('Portfolio uploaded successfully');
@@ -173,6 +226,13 @@ const UserDashboard = () => {
         title: 'Success!',
         text: 'Portfolio uploaded successfully',
         icon: 'success', // use lowercase
+=======
+      });
+      Swal.fire({
+        title: 'Success!',
+        text: 'Portfolio uploaded successfully',
+        icon: 'success',
+>>>>>>> ff81937 (new)
         confirmButtonText: 'Okay'
       });
       setUploading(false);
@@ -221,7 +281,10 @@ const UserDashboard = () => {
     } finally {
       setProfileLoading(false)
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> ff81937 (new)
   };
 
   const handleLogout = useLogout(providerId);
@@ -261,7 +324,10 @@ const UserDashboard = () => {
     try {
       const { data } = await axios.get('https://testapi.dessobuild.com/api/v1/get-all-commision')
       const commissiondata = data.data
+<<<<<<< HEAD
       // console.log("commission",commissiondata[0]?.commissionPercent)
+=======
+>>>>>>> ff81937 (new)
       setCommissionPercent(commissiondata[0]?.commissionPercent)
     } catch (error) {
       console.log("Internale server error", error)
@@ -280,31 +346,48 @@ const UserDashboard = () => {
     setAmount(e.target.value);
     setCommission(calculatedCommission);
     setFinalAmount(calculatedFinalAmount);
+<<<<<<< HEAD
     // setError("");
+=======
+>>>>>>> ff81937 (new)
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!amount || parseFloat(amount) <= 0) {
+<<<<<<< HEAD
       // setError("Please enter a valid amount.");
       // toast.error("Please enter a valid amount.");
       Swal.fire({
         title: 'Error!',
         text: "Please enter a valid amount.",
         icon: 'error', // use lowercase
+=======
+      Swal.fire({
+        title: 'Error!',
+        text: "Please enter a valid amount.",
+        icon: 'error',
+>>>>>>> ff81937 (new)
         confirmButtonText: 'Okay'
       });
       return;
     }
 
     if (parseFloat(amount) > walletAmount) {
+<<<<<<< HEAD
       // setError("Insufficient wallet balance.");
       // toast.error("Insufficient wallet balance.");
       Swal.fire({
         title: 'Error!',
         text: "Insufficient wallet balance.",
         icon: 'error', // use lowercase
+=======
+      Swal.fire({
+        title: 'Error!',
+        text: "Insufficient wallet balance.",
+        icon: 'error',
+>>>>>>> ff81937 (new)
         confirmButtonText: 'Okay'
       });
       return;
@@ -327,22 +410,36 @@ const UserDashboard = () => {
         setFinalAmount(0);
         closeWithdrawModal();
       } else {
+<<<<<<< HEAD
         // setError(response.data.message);
         // toast.error(error?.response?.data?.errors?.[0] || error?.response?.data?.message || "Please try again later");
         Swal.fire({
           title: 'Error!',
           text: error?.response?.data?.errors?.[0] || error?.response?.data?.message || "Please try again later",
           icon: 'error', // use lowercase
+=======
+        Swal.fire({
+          title: 'Error!',
+          text: error?.response?.data?.errors?.[0] || error?.response?.data?.message || "Please try again later",
+          icon: 'error',
+>>>>>>> ff81937 (new)
           confirmButtonText: 'Okay'
         });
       }
     } catch (error) {
       console.log("Failed to create withdrawal request. Please try again.", error)
+<<<<<<< HEAD
       // toast.error(error?.response?.data?.errors?.[0] || error?.response?.data?.message || "Please try again later");
       Swal.fire({
         title: 'Error!',
         text: error?.response?.data?.errors?.[0] || error?.response?.data?.message || "Please try again later",
         icon: 'error', // use lowercase
+=======
+      Swal.fire({
+        title: 'Error!',
+        text: error?.response?.data?.errors?.[0] || error?.response?.data?.message || "Please try again later",
+        icon: 'error',
+>>>>>>> ff81937 (new)
         confirmButtonText: 'Okay'
       });
     }
@@ -351,7 +448,10 @@ const UserDashboard = () => {
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState('');
   const [isOtpVerified, setIsOtpVerified] = useState(false);
+<<<<<<< HEAD
   // const mobileNumber = myProfile.mobileNumber
+=======
+>>>>>>> ff81937 (new)
 
   const sendOtp = async () => {
     try {
@@ -370,13 +470,20 @@ const UserDashboard = () => {
     }
   };
 
+<<<<<<< HEAD
   // Function to verify OTP
+=======
+>>>>>>> ff81937 (new)
   const verifyOtp = async () => {
     try {
       const response = await axios.post('https://testapi.dessobuild.com/api/v1/verify_otp_before_update', { mobileNumber, otp });
       if (response.data.success) {
         setIsOtpVerified(true);
+<<<<<<< HEAD
         setActiveTab(3); // Open BankDetail after OTP verification
+=======
+        setActiveTab(3);
+>>>>>>> ff81937 (new)
         setOtpSent(false);
         setOtp('');
         closeOtpModal();
@@ -392,7 +499,10 @@ const UserDashboard = () => {
     }
   };
 
+<<<<<<< HEAD
   // Close OTP Modal
+=======
+>>>>>>> ff81937 (new)
   const closeOtpModal = () => {
     document.getElementById('otpModal').style.display = 'none';
   };
@@ -401,6 +511,7 @@ const UserDashboard = () => {
     document.getElementById('withdrawalModal').style.display = 'none';
   };
 
+<<<<<<< HEAD
 
   if (token === null) {
     return <div className="container my-5 text-center">
@@ -441,10 +552,61 @@ const UserDashboard = () => {
       </a>
     </div>
 
+=======
+  if (token === null) {
+    return (
+      <div className="container my-5 text-center">
+        <div className="w-100">
+          <img
+            src="https://i.ibb.co/C56bwYQ/401-Error-Unauthorized-pana.png"
+            alt="401 Unauthorized"
+            className="img-fluid mx-auto d-block mb-4"
+            style={{ maxWidth: '80%', height: 'auto' }}
+          />
+        </div>
+        <p className="fs-4 text-muted">You are not authorized to view this page.</p>
+        <a href="/login" className="btn btn-outline-danger as_btn btn-lg mt-3">
+          <i className="fas fa-sign-in-alt me-2"></i>
+          Login
+        </a>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (!myProfile) {
+    return (
+      <div className="container my-5 text-center">
+        <div className="w-100">
+          <img
+            src="https://i.ibb.co/C56bwYQ/401-Error-Unauthorized-pana.png"
+            alt="401 Unauthorized"
+            className="img-fluid mx-auto d-block mb-4"
+            style={{ maxWidth: '80%', height: 'auto' }}
+          />
+        </div>
+        <p className="fs-4 text-muted">You are not authorized to view this page.</p>
+        <a href="/login" className="btn btn-outline-danger as_btn btn-lg mt-3">
+          <i className="fas fa-sign-in-alt me-2"></i>
+          Login
+        </a>
+      </div>
+    )
+>>>>>>> ff81937 (new)
   }
 
   return (
     <div className='userdashboard-body-bg'>
+<<<<<<< HEAD
       <div className="w-100 mx-auto py-5 h-100 px-2">
         <div className="row d-flex justify-content-center align-items-center h-100">
           <div className="col col-xl-12">
@@ -644,11 +806,154 @@ const UserDashboard = () => {
                   </button>
 
                 </div>
+=======
+      <div className="container-fluid py-4 px-3 px-md-4">
+        {/* Profile Header */}
+        <div className="card profile-card-header mb-4">
+          <div className="card-body p-4">
+            <div className="d-md-flex justify-content-between align-items-start">
+              <div className="d-flex flex-column flex-md-row align-items-start align-items-md-center mb-3 mb-md-0">
+                <div className="position-relative me-md-3 mb-3 mb-md-0">
+                  <label htmlFor="profile-upload" className="cursor-pointer">
+                    <img
+                      src={myProfile?.photo?.imageUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(myProfile.name || 'User')}&background=random`}
+                      alt="avatar"
+                      className="img-fluid object-cover rounded-circle"
+                      style={{ width: '90px', height: '90px', cursor: 'pointer' }}
+                    />
+                    <div className="position-absolute bottom-0 end-0 bg-white rounded-circle p-1 shadow-sm">
+                      <i className="fas fa-camera text-primary"></i>
+                    </div>
+                  </label>
+                  <input
+                    type="file"
+                    id="profile-upload"
+                    style={{ display: 'none' }}
+                    accept="image/*"
+                    onChange={handleFileChange}
+                  />
+                  {myProfile?.isVerified && (
+                    <span className="badge bg-primary position-absolute top-0 end-0">
+                      Verified
+                    </span>
+                  )}
+                </div>
+                
+                <div className="ms-md-3">
+                  <h3 className="mb-1">{myProfile.name}</h3>
+                  <p className="text-muted mb-2">
+                    <span className="badge bg-light text-dark me-2">{myProfile?.type}</span>
+                    <span className="me-2">•</span>
+                    {`₹ ${myProfile.pricePerMin}/min`}
+                    <span className="mx-2">•</span>
+                    {myProfile.language && myProfile.language.slice(0, 2).map((lang, index) => (
+                      <span key={index} className="badge bg-light text-dark me-1">
+                        {lang}
+                      </span>
+                    ))}
+                    {myProfile.language && myProfile.language.length > 2 && (
+                      <span className="badge bg-light text-dark">+{myProfile.language.length - 2}</span>
+                    )}
+                  </p>
+                  
+                  <div className="d-flex flex-wrap gap-2 mt-2">
+                    <div className="d-flex align-items-center bg-light rounded-pill px-3 py-1">
+                      <span className="me-2 small">Chat</span>
+                      <div className="form-check form-switch mb-0">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          role="switch"
+                          checked={statuses.chatStatus}
+                          onChange={() => handleToggle('chatStatus')}
+                        />
+                      </div>
+                    </div>
+                    <div className="d-flex align-items-center bg-light rounded-pill px-3 py-1">
+                      <span className="me-2 small">Call</span>
+                      <div className="form-check form-switch mb-0">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          role="switch"
+                          checked={statuses.callStatus}
+                          onChange={() => handleToggle('callStatus')}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="d-flex flex-column gap-2 align-items-start align-items-md-end">
+                <a
+                  className="btn btn-warning d-flex align-items-center"
+                  href={`https://wa.me/?text=Join%20HelpUBuild%20and%20get%20amazing%20benefits!%20Register%20here:%20https://dessobuild.com/member-registration?ref=${myProfile?.couponCode}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <i className="fas fa-share me-1"></i> Refer & Earn
+                </a>
+                
+                <div className="d-flex align-items-center bg-light rounded-pill px-3 py-2">
+                  <span className="me-2">Balance:</span>
+                  <span className="fw-bold text-primary">₹{walletAmount}</span>
+                </div>
+                
+                <button onClick={() => sendOtp()} className="btn btn-outline-primary btn-sm">
+                  Withdraw
+                </button>
+              </div>
+            </div>
+
+            <hr className="my-4" />
+            
+            {/* Navigation Tabs */}
+            <div className="d-flex flex-wrap gap-2 gap-md-3">
+              {['Gallery', 'Portfolio', 'Withdraw', 'settings'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`btn ${activeTab === tab ? 'btn-primary' : 'btn-outline-primary'} text-uppercase rounded-pill`}
+                  style={{ fontSize: '0.8rem' }}
+                >
+                  <i className={`fas fa-${tab === 'Gallery' ? 'image' : tab === 'Portfolio' ? 'briefcase' : tab === 'Withdraw' ? 'wallet' : 'cog'} me-1`}></i>
+                  {tab}
+                </button>
+              ))}
+              
+              <div className="d-flex gap-2 ms-auto">
+                <button
+                  className="btn btn-outline-danger btn-sm"
+                  title="Delete Account"
+                  onClick={() => handleDeleteAccount(providerId)}
+                >
+                  <i className="fas fa-trash me-1"></i> Delete
+                </button>
+                
+                <button
+                  className="btn btn-outline-secondary btn-sm"
+                  title="Logout"
+                  onClick={() => handleLogout()}
+                >
+                  <i className="fas fa-sign-out-alt me-1"></i> Logout
+                </button>
+                
+                <button
+                  className="btn btn-outline-dark btn-sm"
+                  title={myProfile?.isDeactived ? "Activate Account" : "Deactivate Account"}
+                  onClick={() => handleIsDeactived(providerId, !myProfile.isDeactived)}
+                >
+                  <i className={`fas ${myProfile.isDeactived ? 'fa-user-check' : 'fa-user-slash'} me-1`}></i>
+                  {myProfile.isDeactived ? "Activate" : "Deactivate"}
+                </button>
+>>>>>>> ff81937 (new)
               </div>
             </div>
           </div>
         </div>
 
+<<<<<<< HEAD
 
         {activeTab === "Gallery" && (
 
@@ -752,10 +1057,51 @@ const UserDashboard = () => {
                                 borderRadius: "8px",
                               }}
                             ></div>
+=======
+        {/* Main Content */}
+        <div className="tab-content">
+          {/* Gallery Tab */}
+          {activeTab === "Gallery" && (
+            <div className="card mb-4">
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <h4 className="mb-0">
+                    <i className="fas fa-image text-primary me-2"></i>
+                    Your Work Gallery
+                  </h4>
+                  <button
+                    onClick={() => setShowGalleryUpload(!showGalleryUpload)}
+                    className="btn btn-primary"
+                  >
+                    <i className="fas fa-plus me-1"></i>
+                    {showGalleryUpload ? 'View Gallery' : 'Add Images'}
+                  </button>
+                </div>
+                
+                {showGalleryUpload ? (
+                  <UploadGallery isShow={showGalleryUpload} token={token} />
+                ) : (
+                  <>
+                    {myProfile?.portfolio?.GalleryImages?.length > 0 ? (
+                      <div className="row g-3">
+                        {myProfile.portfolio.GalleryImages.map((image, index) => (
+                          <div key={index} className="col-6 col-md-4 col-lg-3">
+                            <div className="gallery-item position-relative overflow-hidden rounded" style={{ height: '200px' }}>
+                              <img 
+                                src={image.url} 
+                                alt={`Gallery ${index + 1}`}
+                                className="img-fluid w-100 h-100 object-cover"
+                              />
+                              <div className="position-absolute top-0 end-0 m-2">
+                                <span className="badge bg-dark">{index + 1}</span>
+                              </div>
+                            </div>
+>>>>>>> ff81937 (new)
                           </div>
                         ))}
                       </div>
                     ) : (
+<<<<<<< HEAD
                       /* Error Handling */
                       <div className="text-center">
                         <h3 className="text-danger">No images available in the gallery!</h3>
@@ -934,6 +1280,144 @@ const UserDashboard = () => {
         aria-labelledby="withdrawalModalLabel"
         aria-hidden="true"
         aria-modal="true"
+=======
+                      <div className="text-center py-5">
+                        <i className="fas fa-image fa-3x text-muted mb-3"></i>
+                        <h5 className="text-muted">No images in your gallery yet</h5>
+                        <p className="text-muted">Upload images to showcase your work</p>
+                        <button
+                          onClick={() => setShowGalleryUpload(true)}
+                          className="btn btn-primary mt-2"
+                        >
+                          <i className="fas fa-plus me-1"></i>
+                          Add Gallery
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                <div className="mt-5">
+                  <Reviews />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Portfolio Tab */}
+          {activeTab === 'Portfolio' && (
+            <div className="card mb-4">
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <h4 className="mb-0">
+                    <i className="fas fa-briefcase text-primary me-2"></i>
+                    My Portfolio
+                  </h4>
+                  
+                  {myProfile?.portfolio?.PortfolioLink && !reUploadTrue && (
+                    <button
+                      onClick={() => setReUploadTrue(true)}
+                      className="btn btn-outline-primary"
+                    >
+                      <i className="fas fa-upload me-1"></i>
+                      Update Portfolio
+                    </button>
+                  )}
+                </div>
+                
+                {!reUploadTrue ? (
+                  <Portfolio fileUrl={myProfile?.portfolio?.PortfolioLink} />
+                ) : (
+                  <>
+                    <div className="d-flex justify-content-end gap-2 mb-4">
+                      <button
+                        onClick={() => setReUploadTrue(false)}
+                        className="btn btn-outline-secondary"
+                        disabled={!myProfile?.portfolio?.PortfolioLink}
+                      >
+                        <i className="fas fa-eye me-1"></i>
+                        View Portfolio
+                      </button>
+                      <button
+                        onClick={handleUpload}
+                        className="btn btn-primary"
+                        disabled={uploading || files.length === 0}
+                      >
+                        <i className="fas fa-upload me-1"></i>
+                        {uploading ? 'Uploading...' : 'Upload Portfolio'}
+                      </button>
+                    </div>
+                    
+                    <div
+                      {...getRootProps()}
+                      className="dropzone border-dashed rounded-lg p-5 text-center cursor-pointer bg-light"
+                    >
+                      <input {...getInputProps()} />
+                      <i className="fas fa-cloud-upload-alt text-primary fa-3x mb-3"></i>
+                      <h5 className="text-muted mb-2">Drag & drop your PDF files here</h5>
+                      <p className="text-muted mb-0">or click to browse (Max 5 files, 15MB each)</p>
+                    </div>
+                    
+                    {files.length > 0 && (
+                      <div className="mt-4">
+                        <h6 className="mb-3">Selected files:</h6>
+                        <div className="row">
+                          {files.map((file, index) => (
+                            <div key={index} className="col-12 col-sm-6 col-md-4 mb-3">
+                              <div className="card border-0 shadow-sm h-100">
+                                <div className="card-body text-center">
+                                  <i className="fas fa-file-pdf text-danger fa-2x mb-2"></i>
+                                  <p className="card-text text-truncate">{file.name}</p>
+                                  <small className="text-muted">{(file.size / 1024 / 1024).toFixed(2)} MB</small>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Settings Tab */}
+          {activeTab === "settings" && (
+            <div className="card mb-4">
+              <div className="card-body">
+                <h4 className="mb-4">
+                  <i className="fas fa-cog text-primary me-2"></i>
+                  Account Settings
+                </h4>
+                <Settings data={myProfile} />
+              </div>
+            </div>
+          )}
+
+          {/* Withdraw Tab */}
+          {activeTab === "Withdraw" && (
+            <div className="card mb-4">
+              <div className="card-body">
+                <h4 className="mb-4">
+                  <i className="fas fa-wallet text-primary me-2"></i>
+                  Withdrawal History
+                </h4>
+                <Withdraw data={myProfile} />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Withdrawal Modal */}
+      <div
+        className="modal fade"
+        id="withdrawalModal"
+        tabIndex="-1"
+        aria-labelledby="withdrawalModalLabel"
+        aria-hidden="true"
+>>>>>>> ff81937 (new)
       >
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
@@ -957,7 +1441,10 @@ const UserDashboard = () => {
                     Enter Amount
                   </label>
                   <input
+<<<<<<< HEAD
                     style={{ border: '1px solid #0000001a' }}
+=======
+>>>>>>> ff81937 (new)
                     type="number"
                     className="form-control"
                     id="amount"
@@ -968,6 +1455,7 @@ const UserDashboard = () => {
                   />
                 </div>
 
+<<<<<<< HEAD
                 <div className="mt-4">
                   <p className="text-muted">
                     <strong>Commission Percentage:</strong> {commissionPercent}%
@@ -978,6 +1466,17 @@ const UserDashboard = () => {
                   <p className="text-muted">
                     <strong>Final Amount:</strong> ₹{finalAmount.toFixed(2)}
                   </p>
+=======
+                <div className="bg-light p-3 rounded mb-3">
+                  <div className="d-flex justify-content-between mb-1">
+                    <span>Commission ({commissionPercent}%):</span>
+                    <span>₹{commission.toFixed(2)}</span>
+                  </div>
+                  <div className="d-flex justify-content-between fw-bold">
+                    <span>Final Amount:</span>
+                    <span className="text-primary">₹{finalAmount.toFixed(2)}</span>
+                  </div>
+>>>>>>> ff81937 (new)
                 </div>
               </div>
 
@@ -987,7 +1486,11 @@ const UserDashboard = () => {
                   className="btn btn-secondary"
                   onClick={closeWithdrawModal}
                 >
+<<<<<<< HEAD
                   Close
+=======
+                  Cancel
+>>>>>>> ff81937 (new)
                 </button>
                 <button type="submit" className="btn btn-primary">
                   Submit Request
@@ -998,19 +1501,33 @@ const UserDashboard = () => {
         </div>
       </div>
 
+<<<<<<< HEAD
       {otpSent && (
         <div id="otpModal" className="modal fade show" style={{ display: 'block' }} aria-modal="true">
           <div className="modal-dialog">
             <div className="modal-content">
               <div className="modal-header">
                 <h4 className="modal-title">OTP Verification</h4>
+=======
+      {/* OTP Modal */}
+      {otpSent && (
+        <div className="modal fade show" style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">OTP Verification</h5>
+>>>>>>> ff81937 (new)
                 <button type="button" className="btn-close" onClick={closeOtpModal}></button>
               </div>
               <div className="modal-body">
                 <p>An OTP has been sent to your registered mobile number: <strong>{mobileNumber}</strong></p>
                 <input
                   type="text"
+<<<<<<< HEAD
                   className="form-control mt-2 border"
+=======
+                  className="form-control mt-2"
+>>>>>>> ff81937 (new)
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
                   placeholder="Enter OTP"
@@ -1024,8 +1541,24 @@ const UserDashboard = () => {
           </div>
         </div>
       )}
+<<<<<<< HEAD
+=======
+
+      {showCropper && selectedImage && (
+        <CropperModal
+          imageSrc={selectedImage}
+          onClose={() => setShowCropper(false)}
+          onCropComplete={handleCropComplete}
+          profileLoading={profileLoading}
+        />
+      )}
+>>>>>>> ff81937 (new)
     </div>
   );
 };
 
+<<<<<<< HEAD
 export default UserDashboard;
+=======
+export default UserDashboard;
+>>>>>>> ff81937 (new)

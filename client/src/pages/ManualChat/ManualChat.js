@@ -96,9 +96,13 @@ const ManualChat = () => {
 
   // Add new state for unified history
   const [annotationHistory, setAnnotationHistory] = useState([]);
+<<<<<<< HEAD
   const [pendingDataURL, setPendingDataURL] = useState(null);
   const [annotationHistoryIndex, setAnnotationHistoryIndex] = useState(-1);
   const [hasErased, setHasErased] = useState(false);
+=======
+  const [annotationHistoryIndex, setAnnotationHistoryIndex] = useState(-1);
+>>>>>>> ff81937 (new)
   // Add state to track ongoing drawing action
   const [isDrawing, setIsDrawing] = useState(false);
 
@@ -199,9 +203,12 @@ const ManualChat = () => {
   const [isPanning, setIsPanning] = useState(false)
   const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 })
 
+<<<<<<< HEAD
   // Add ref for previous zoom level
   const prevZoomRef = useRef(1);
 
+=======
+>>>>>>> ff81937 (new)
   // Add participants mapping for better sender resolution
   const [participantsMap, setParticipantsMap] = useState(new Map())
 
@@ -227,11 +234,18 @@ const ManualChat = () => {
   // Debounced saveAnnotationState to prevent rapid state saves
   const saveAnnotationState = useCallback(
     debounce(() => {
+<<<<<<< HEAD
       const canvasVector = canvasRef.current ? canvasRef.current.getSaveData() : null;
       const canvasRaster = hasErased ? (canvasRef.current ? canvasRef.current.canvas.drawing.toDataURL("image/png") : null) : null;
       const currentState = {
         canvasVector,
         canvasRaster, textElements: [...textElements],
+=======
+      const canvasData = canvasRef.current ? canvasRef.current.getSaveData() : null;
+      const currentState = {
+        canvas: canvasData,
+        textElements: [...textElements],
+>>>>>>> ff81937 (new)
         shapes: [...shapes],
         zoom: zoomLevel,
       };
@@ -249,12 +263,16 @@ const ManualChat = () => {
         });
         setAnnotationHistoryIndex((prev) => prev + 1);
       }
+<<<<<<< HEAD
       // Reset hasErased if no raster
       if (!currentState.canvasRaster) setHasErased(false);
+=======
+>>>>>>> ff81937 (new)
     }, 100), // Reduced to 100ms for faster response
     [textElements, shapes, annotationHistoryIndex]
   );
 
+<<<<<<< HEAD
   // Scale canvas drawings when zoom changes
   useEffect(() => {
     if (pendingDataURL && canvasRef.current && isAnnotating) {
@@ -301,6 +319,8 @@ const ManualChat = () => {
     }
   }, [zoomLevel, isAnnotating, hasErased]);
 
+=======
+>>>>>>> ff81937 (new)
   // Enhanced function to build participants map
   const buildParticipantsMap = useCallback(
     (chatData) => {
@@ -470,6 +490,7 @@ const ManualChat = () => {
 
   // Modified updateTextElement to save state only once
   const updateTextElement = useCallback(
+<<<<<<< HEAD
     (id, updates) => {
       const newElements = textElements.map((el) => (el.id === id ? { ...el, ...updates } : el));
       setTextElements(newElements);
@@ -477,6 +498,15 @@ const ManualChat = () => {
     },
     [textElements, saveAnnotationState]
   );
+=======
+  (id, updates) => {
+    const newElements = textElements.map((el) => (el.id === id ? { ...el, ...updates } : el));
+    setTextElements(newElements);
+    saveAnnotationState();
+  },
+  [textElements, saveAnnotationState]
+);
+>>>>>>> ff81937 (new)
 
   // Modified deleteTextElement to save state only once
   const deleteTextElement = useCallback(
@@ -673,6 +703,7 @@ const ManualChat = () => {
       const newZoom = Math.min(Math.max(zoomLevel * zoomFactor, 0.1), 5);
 
       if (newZoom !== zoomLevel) {
+<<<<<<< HEAD
         if (canvasRef.current && isAnnotating) {
           if (hasErased) {
             const dataURL = canvasRef.current.canvas.drawing.toDataURL("image/png");
@@ -680,6 +711,8 @@ const ManualChat = () => {
             setPendingDataURL(dataURL);
           }
         }
+=======
+>>>>>>> ff81937 (new)
         const container = containerRef.current;
         if (container) {
           const rect = container.getBoundingClientRect();
@@ -694,12 +727,22 @@ const ManualChat = () => {
             x: px - newZoom * ((px - panOffset.x) / zoomLevel),
             y: py - newZoom * ((py - panOffset.y) / zoomLevel),
           };
+<<<<<<< HEAD
           setPanOffset(newPanOffset);
         }
         setZoomLevel(newZoom);
       }
     },
     [zoomLevel, panOffset, hasErased, isAnnotating]
+=======
+
+          setZoomLevel(newZoom);
+          setPanOffset(newPanOffset);
+        }
+      }
+    },
+    [zoomLevel, panOffset]
+>>>>>>> ff81937 (new)
   );
 
   const handleWheel = useCallback(
@@ -984,6 +1027,7 @@ const ManualChat = () => {
     }
     if (drawingTool === "eraser") {
       setIsDrawing(false);
+<<<<<<< HEAD
       if (canvasRef.current) {
         const dataURL = canvasRef.current.canvas.drawing.toDataURL("image/png");
         canvasRef.current.loadSaveData('{"lines":[]}', true);
@@ -995,6 +1039,8 @@ const ManualChat = () => {
         };
       }
       setHasErased(true);
+=======
+>>>>>>> ff81937 (new)
       saveAnnotationState();
     }
   }, [isDrawingShape, currentShape, drawingTool, saveAnnotationState]);
@@ -1052,6 +1098,7 @@ const ManualChat = () => {
 
   // Text Double Click Handler for Editing
   const handleTextDoubleClick = useCallback(
+<<<<<<< HEAD
     (textId) => {
       const element = textElements.find((el) => el.id === textId);
       if (!element) return;
@@ -1097,6 +1144,53 @@ const ManualChat = () => {
     setEditingTextId(null);
     setEditingTextValue("");
   }, [editingTextId, editingTextValue, textSettings, updateTextElement]);
+=======
+  (textId) => {
+    const element = textElements.find((el) => el.id === textId);
+    if (!element) return;
+
+    setIsEditingText(true);
+    setEditingTextId(textId);
+    setEditingTextValue(element.text);
+    setSelectedTextId(textId);
+    // Set text settings based on the selected element
+    setTextSettings({
+      fontSize: element.fontSize,
+      color: element.color,
+      fontFamily: element.fontFamily,
+      fontWeight: element.fontWeight,
+      fontStyle: element.fontStyle,
+      textDecoration: element.textDecoration,
+      textAlign: element.textAlign,
+      backgroundColor: element.backgroundColor,
+      padding: element.padding,
+    });
+
+    setTimeout(() => {
+      if (editTextInputRef.current) {
+        editTextInputRef.current.focus();
+        editTextInputRef.current.select();
+      }
+    }, 100);
+  },
+  [textElements]
+);
+
+  // Save Text Edit
+  const saveTextEdit = useCallback(() => {
+  if (editingTextId && editingTextValue.trim()) {
+    updateTextElement(editingTextId, {
+      text: editingTextValue.trim(),
+      fontSize: textSettings.fontSize,
+      color: textSettings.color,
+      fontFamily: textSettings.fontFamily,
+    });
+  }
+  setIsEditingText(false);
+  setEditingTextId(null);
+  setEditingTextValue("");
+}, [editingTextId, editingTextValue, textSettings, updateTextElement]);
+>>>>>>> ff81937 (new)
 
   // Cancel Text Edit
   const cancelTextEdit = useCallback(() => {
@@ -1208,6 +1302,11 @@ const ManualChat = () => {
         setShowModal(false);
         setIsAnnotating(false);
         setTextElements([]);
+<<<<<<< HEAD
+=======
+        setTextHistory([]);
+        setHistoryIndex(-1);
+>>>>>>> ff81937 (new)
         setShapes([]);
         if (replyingTo) cancelReply();
       };
@@ -1233,7 +1332,10 @@ const ManualChat = () => {
     setCurrentShape(null);
     setAnnotationHistory([]);
     setAnnotationHistoryIndex(-1);
+<<<<<<< HEAD
     setHasErased(false);
+=======
+>>>>>>> ff81937 (new)
     saveAnnotationState();
   }, [saveAnnotationState]);
 
@@ -1253,6 +1355,7 @@ const ManualChat = () => {
     const previousState = annotationHistory[previousIndex];
 
     if (canvasRef.current) {
+<<<<<<< HEAD
       const drawingCanvas = canvasRef.current.canvas.drawing;
       const ctx = drawingCanvas.getContext("2d");
       ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
@@ -1267,6 +1370,11 @@ const ManualChat = () => {
       } else if (previousState.canvasVector) {
         try {
           let saveData = JSON.parse(previousState.canvasVector);
+=======
+      if (previousState.canvas) {
+        try {
+          let saveData = JSON.parse(previousState.canvas);
+>>>>>>> ff81937 (new)
           if (saveData) {
             const scaleFactor = zoomLevel / previousState.zoom;
             saveData.lines.forEach((line) => {
@@ -1277,13 +1385,22 @@ const ManualChat = () => {
               line.brushRadius *= scaleFactor;
             });
             canvasRef.current.loadSaveData(JSON.stringify(saveData), true);
+<<<<<<< HEAD
             setHasErased(false);
+=======
+>>>>>>> ff81937 (new)
           }
         } catch (error) {
           console.error("Failed to restore canvas:", error);
           canvasRef.current.clear();
+<<<<<<< HEAD
           setHasErased(false);
         }
+=======
+        }
+      } else {
+        canvasRef.current.clear();
+>>>>>>> ff81937 (new)
       }
     }
 
@@ -1302,6 +1419,7 @@ const ManualChat = () => {
     const nextState = annotationHistory[nextIndex];
 
     if (canvasRef.current) {
+<<<<<<< HEAD
       const drawingCanvas = canvasRef.current.canvas.drawing;
       const ctx = drawingCanvas.getContext("2d");
       ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
@@ -1316,6 +1434,11 @@ const ManualChat = () => {
       } else if (nextState.canvasVector) {
         try {
           let saveData = JSON.parse(nextState.canvasVector);
+=======
+      if (nextState.canvas) {
+        try {
+          let saveData = JSON.parse(nextState.canvas);
+>>>>>>> ff81937 (new)
           if (saveData) {
             const scaleFactor = zoomLevel / nextState.zoom;
             saveData.lines.forEach((line) => {
@@ -1326,13 +1449,22 @@ const ManualChat = () => {
               line.brushRadius *= scaleFactor;
             });
             canvasRef.current.loadSaveData(JSON.stringify(saveData), true);
+<<<<<<< HEAD
             setHasErased(false);
+=======
+>>>>>>> ff81937 (new)
           }
         } catch (error) {
           console.error("Failed to restore canvas:", error);
           canvasRef.current.clear();
+<<<<<<< HEAD
           setHasErased(false);
         }
+=======
+        }
+      } else {
+        canvasRef.current.clear();
+>>>>>>> ff81937 (new)
       }
     }
 
@@ -2006,7 +2138,11 @@ const ManualChat = () => {
         return;
       }
 
+<<<<<<< HEAD
       if (!validateMessageContent(trimmedMessage)) {
+=======
+      if (!validateMessageContent(trimmedMessage) ) {
+>>>>>>> ff81937 (new)
         toast.error("Your message contains prohibited content");
         return;
       }
@@ -2549,6 +2685,7 @@ const ManualChat = () => {
 
                               {/* Drawing Tools Section */}
                               <div className="mb-4">
+<<<<<<< HEAD
                                 <h6 style={{ display: 'flex' }} className="text-black mb-3 align-items-center gap-2">
                                   <MdBrush className="text-info" /> Drawing Tools
                                 </h6>
@@ -2630,6 +2767,89 @@ const ManualChat = () => {
                                   </button>
                                 </div>
                               </div>
+=======
+  <h6 style={{ display: 'flex' }} className="text-black mb-3 align-items-center gap-2">
+    <MdBrush className="text-info" /> Drawing Tools
+  </h6>
+
+  {/* First Row */}
+  <div style={{ display: 'flex' }} className="gap-2 mb-2">
+    <button
+      className={`btn ${drawingTool === "brush" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("brush"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Brush Tool - Draw freehand"
+    >
+      <MdBrush />
+    </button>
+
+    <button
+      className={`btn ${drawingTool === "eraser" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("eraser"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Eraser Tool - Remove drawings"
+    >
+      <MdClear />
+    </button>
+
+    <button
+      className={`btn ${drawingTool === "rectangle" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("rectangle"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Rectangle Tool - Draw rectangles"
+    >
+      <MdRectangle />
+    </button>
+
+    <button
+      className={`btn ${drawingTool === "circle" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("circle"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Circle Tool - Draw circles"
+    >
+      <MdCircle />
+    </button>
+  </div>
+
+  {/* Second Row */}
+  <div style={{ display: 'flex' }} className="gap-2">
+    <button
+      className={`btn ${drawingTool === "arrow" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("arrow"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Arrow Tool - Draw arrows"
+    >
+      <MdArrowForward />
+    </button>
+
+    <button
+      className={`btn ${drawingTool === "text" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => {
+        if (isAddingText) {
+          setIsAddingText(false);
+          setDrawingTool("brush");
+        } else {
+          setIsAddingText(true);
+          setDrawingTool("text");
+        }
+      }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Text Tool - Add text"
+    >
+      <TfiText />
+    </button>
+
+    <button
+      className={`btn ${drawingTool === "pan" ? "btn-info text-dark" : "btn-outline-info"}`}
+      onClick={() => { setDrawingTool("pan"); if (isAddingText) setIsAddingText(false); }}
+      style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+      title="Pan Tool - Drag to move"
+    >
+      <Hand />
+    </button>
+  </div>
+</div>
+>>>>>>> ff81937 (new)
 
 
                               {/* Brush Settings */}
@@ -3010,6 +3230,7 @@ const ManualChat = () => {
 
                           {/* Text Editing Modal */}
                           {isEditingText && (
+<<<<<<< HEAD
                             <div
                               className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-75"
                               style={{ zIndex: 9999 }}
@@ -3118,6 +3339,116 @@ const ManualChat = () => {
                               </div>
                             </div>
                           )}
+=======
+  <div
+    className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-75"
+    style={{ zIndex: 9999 }}
+  >
+    <div
+      className="bg-white rounded-3 shadow-lg p-4 mx-3"
+      style={{ minWidth: "350px", maxWidth: "90vw" }}
+    >
+      <div className="d-flex align-items-center gap-2 mb-3">
+        <div className="bg-primary text-white rounded-circle p-2">
+          <MdPinEnd />
+        </div>
+        <h5 className="mb-0 text-primary fw-bold">Edit Text</h5>
+      </div>
+      {/* Text Content Input */}
+      <div className="mb-3">
+        <label className="form-label text-black small">Text Content</label>
+        <input
+          ref={editTextInputRef}
+          type="text"
+          value={editingTextValue}
+          onChange={(e) => setEditingTextValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && editingTextValue.trim()) {
+              saveTextEdit();
+            } else if (e.key === "Escape") {
+              cancelTextEdit();
+            }
+          }}
+          className="form-control form-control-lg border-primary"
+          placeholder="Enter your text..."
+          style={{
+            fontSize: `${textSettings.fontSize}px`,
+            fontFamily: textSettings.fontFamily,
+            fontWeight: textSettings.fontWeight,
+            fontStyle: textSettings.fontStyle,
+            color: textSettings.color,
+          }}
+        />
+      </div>
+      {/* Text Settings Section */}
+      <div className="mb-3">
+        <h6 className="text-black mb-3 d-flex align-items-center gap-2">
+          <MdPinEnd className="text-warning" /> Text Settings
+        </h6>
+        <div className="d-flex flex-column gap-3">
+          <div>
+            <label className="form-label text-black small">Text Color</label>
+            <input
+              type="color"
+              value={textSettings.color}
+              onChange={(e) =>
+                setTextSettings((prev) => ({ ...prev, color: e.target.value }))
+              }
+              className="form-control border form-control-color w-100"
+              style={{ height: "40px" }}
+            />
+          </div>
+          <div>
+            <label className="form-label text-black small">
+              Font Size: {textSettings.fontSize}px
+            </label>
+            <input
+              type="range"
+              min="12"
+              max="48"
+              value={textSettings.fontSize}
+              onChange={(e) =>
+                setTextSettings((prev) => ({
+                  ...prev,
+                  fontSize: Number.parseInt(e.target.value),
+                }))
+              }
+              className="form-range"
+            />
+          </div>
+          <div>
+            <label className="form-label text-black small">Font Family</label>
+            <select
+              value={textSettings.fontFamily}
+              onChange={(e) =>
+                setTextSettings((prev) => ({ ...prev, fontFamily: e.target.value }))
+              }
+              className="form-select form-select-sm text-black border-secondary"
+            >
+              <option value="Arial">Arial</option>
+              <option value="Helvetica">Helvetica</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Courier New">Courier New</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div className="d-flex gap-2 justify-content-end">
+        <button
+          className="btn btn-success px-4"
+          onClick={saveTextEdit}
+          disabled={!editingTextValue.trim()}
+        >
+          <MdPinEnd className="me-1" /> Save
+        </button>
+        <button className="btn btn-outline-secondary px-4" onClick={cancelTextEdit}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+>>>>>>> ff81937 (new)
                         </div>
                       )}
                     </Modal.Body>

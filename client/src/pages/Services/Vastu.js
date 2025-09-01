@@ -753,7 +753,12 @@ function Vastu() {
             <div className="col-12">
               <div className="results-summary mb-3">
                 <p className="mb-0">
+<<<<<<< HEAD
                   Showing {currentProviders.length} of {filteredProviders.length} architects
+=======
+                  Showing {currentProviders.length} of {filteredProviders.length} Vastu Experts
+
+>>>>>>> ff81937 (new)
                   {getActiveFiltersCount() > 0 && (
                     <span className="ml-2">
                       ({getActiveFiltersCount()} filter{getActiveFiltersCount() > 1 ? "s" : ""} applied)

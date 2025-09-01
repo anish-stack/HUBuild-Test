@@ -82,6 +82,7 @@ const Footer = () => {
             <img src={logo} alt="DessoBuild" className="footer-logo" />
             <ul className="footer-contact-list">
               <li className="footer-contact-item">
+<<<<<<< HEAD
                 <MapPin className="footer-contact-icon" />
                 <p style={{ color: 'white' }}>
                   E-520A, 3rd Floor, Sector 7, Dwarka, New Delhi- 110075
@@ -99,6 +100,20 @@ const Footer = () => {
                   info@dessobuild.com
                 </a>
               </li>
+=======
+  <MapPin className="footer-contact-icon" size={22} />
+  <p style={{ color: 'white' }}>
+    E-520A, 3rd Floor, Sector 7, Dwarka, New Delhi- 110075
+  </p>
+</li>
+{/* ... */}
+<li className="footer-contact-item">
+  <Mail className="footer-contact-icon" size={22} />
+  <a style={{ color: 'white' }} href="mailto:info@dessobuild.com">
+    info@dessobuild.com
+  </a>
+</li>
+>>>>>>> ff81937 (new)
             </ul>
           </div>
 

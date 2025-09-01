@@ -50,6 +50,10 @@ const UploadGallery = ({ isShow, token }) => {
                     onClick={handleUpload}
                     className="btn mb-3 btn-outline-danger btn-lg"
                     disabled={uploading || files.length === 0}
+<<<<<<< HEAD
+=======
+                    style={{ background: 'linear-gradient(135deg, #042F66 0%, #1a4da3 100%)', color: 'white', border: 'none' }}
+>>>>>>> ff81937 (new)
                 >
                     <i className="fas fa-upload me-2"></i>
                     {uploading ? 'Uploading...' : 'Upload Gallery '}

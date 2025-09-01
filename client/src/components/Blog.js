@@ -40,7 +40,11 @@ const Blog = () => {
         <div className="container">
           <div className="row">
             <div className="col-lg-12 col-md-12 text-center">
+<<<<<<< HEAD
               <h1 className="as_heading">Latest Articles</h1>
+=======
+              <h2 className="as_heading">Latest Articles</h2>
+>>>>>>> ff81937 (new)
               <p className="as_font14 as_padderBottom10">
                 Stay updated with our latest insights and tips on architecture,
                 interior design, and Vastu.
@@ -99,8 +103,13 @@ const Blog = () => {
                   ))}
                 </div>
               </div>
+<<<<<<< HEAD
               <div className="text-center as_padderTop60">
                 <Link to="/blog" className="as_btn">
+=======
+              <div className="text-center as_padderTop60" >
+                <Link to="/blog" className="as_btn" style={{backgroundColor:'#042f66 !important', color:'white'}}>
+>>>>>>> ff81937 (new)
                   View More
                 </Link>
               </div>

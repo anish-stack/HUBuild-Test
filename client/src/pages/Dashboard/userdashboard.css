@@ -1,12 +1,29 @@
 .logout_btn:hover {
     color: white !important;
+<<<<<<< HEAD
     background-color: #DB3C4B !important;
+=======
+   background: linear-gradient(135deg, #eab936, #f4c842);
+}
+.logout_btn {
+    color: white !important;
+   background: linear-gradient(135deg, #eab936, #f4c842) !important;
+>>>>>>> ff81937 (new)
 }
 
 .formarginbottommore{
     margin-bottom: 0px;
 }
+<<<<<<< HEAD
 
+=======
+.add-gallery-btn{
+     background: linear-gradient(135deg, #eab936, #f4c842) !important;
+     /* color: white !important; */
+
+
+}
+>>>>>>> ff81937 (new)
 @media (max-width:750px){
     .formarginbottommore{
         margin-bottom: 3px !important;

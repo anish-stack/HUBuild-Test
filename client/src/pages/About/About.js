@@ -58,7 +58,11 @@ const About = () => {
                                         We connect consumers with professional Architects, Interior Designers, and Vastu Experts for personalized construction-related services and consultations. Additionally, we facilitate connections between B2B and B2C retailers and distributors in the construction materials sector, including raw materials, hardware, and electrical components.
                                     </p>
                                 </div>
+<<<<<<< HEAD
                                 <Link to="/about?read-more=true" class="as_btn mt-5">read more</Link>
+=======
+                                {/* <Link to="/about?read-more=true" class="as_btn mt-5">read more</Link> */}
+>>>>>>> ff81937 (new)
                             </div>
                         </div>
                     </div>
