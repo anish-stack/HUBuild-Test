@@ -1532,6 +1532,7 @@ const UserDashboard = () => {
                   onChange={(e) => setOtp(e.target.value)}
                   placeholder="Enter OTP"
                 />
+                {/* fdf */}
               </div>
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={closeOtpModal}>Cancel</button>
