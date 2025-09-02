@@ -1,21 +1,12 @@
 .logout_btn:hover {
     color: white !important;
-   background: linear-gradient(135deg, #eab936, #f4c842);
-}
-.logout_btn {
-    color: white !important;
-   background: linear-gradient(135deg, #eab936, #f4c842) !important;
+    background-color: #DB3C4B !important;
 }
 
 .formarginbottommore{
     margin-bottom: 0px;
 }
-.add-gallery-btn{
-     background: linear-gradient(135deg, #eab936, #f4c842) !important;
-     /* color: white !important; */
 
-
-}
 @media (max-width:750px){
     .formarginbottommore{
         margin-bottom: 3px !important;

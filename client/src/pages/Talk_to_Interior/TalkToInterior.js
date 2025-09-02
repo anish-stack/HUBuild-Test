@@ -755,7 +755,7 @@ function TalkToInterior() {
             <div className="col-12">
               <div className="results-summary mb-3">
                 <p className="mb-0">
-                  Showing {currentProviders.length} of {filteredProviders.length} Interior Designers
+                  Showing {currentProviders.length} of {filteredProviders.length} architects
                   {getActiveFiltersCount() > 0 && (
                     <span className="ml-2">
                       ({getActiveFiltersCount()} filter{getActiveFiltersCount() > 1 ? "s" : ""} applied)
