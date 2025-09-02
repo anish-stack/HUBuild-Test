@@ -405,12 +405,12 @@ const StepWizard = () => {
                     </div>
 
                     <div className="step-content">
-                        <h4 className="mb-4" style={{color:"#042F66"}}>Membership Details</h4>
+                        <h4 className="mb-4 text-primary">Membership Details</h4>
 
                         <div className="card mb-4 shadow-sm border-0 bg-light">
                             <div className="card-body text-center p-4">
                                 <div className="mb-3">
-                                    <span className="badge p-2 fs-6 text-white " style={{backgroundColor:"#042F66"}}>Premium Membership</span>
+                                    <span className="badge bg-primary p-2 fs-6">Premium Membership</span>
                                 </div>
 
                                 <h3 className="card-title fw-bold mb-3">
