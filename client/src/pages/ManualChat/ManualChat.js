@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState, useCallback, useRef } from "react"
-import { debounce } from "lodash";
+import { debounce } from "lodash"
 import "./chat.css"
 import {
   MdAttachment,
@@ -21,9 +21,8 @@ import {
   MdZoomIn,
   MdZoomOut,
   MdCenterFocusWeak,
-  MdRedo,
 } from "react-icons/md"
-import { TfiText } from "react-icons/tfi";
+import { TfiText } from "react-icons/tfi"
 import ScrollToBottom from "react-scroll-to-bottom"
 import axios from "axios"
 import { GetData } from "../../utils/sessionStoreage"
@@ -35,7 +34,7 @@ import { Modal, Dropdown } from "react-bootstrap"
 import "bootstrap/dist/css/bootstrap.min.css"
 import CanvasDraw from "react-canvas-draw"
 import { Pencil, Hand } from "lucide-react"
-import VoiceRecorder from "./VoiceRecorder"; // Adjust the path as needed
+import VoiceRecorder from "./VoiceRecorder" // Adjust the path as needed
 
 const ENDPOINT = "https://testapi.dessobuild.com/"
 const MAX_FILE_SIZE = 5 * 1024 * 1024
@@ -43,18 +42,18 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024
 // Custom hook to get mouse position adjusted for zoom
 const useAdjustedMousePosition = (containerRef, zoomLevel, panOffset) => {
   const getAdjustedMousePosition = (e) => {
-    const container = containerRef.current;
-    if (!container) return { x: 0, y: 0 };
+    const container = containerRef.current
+    if (!container) return { x: 0, y: 0 }
 
-    const rect = container.getBoundingClientRect();
-    const x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
-    const y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+    const rect = container.getBoundingClientRect()
+    const x = (e.clientX - rect.left - panOffset.x) / zoomLevel
+    const y = (e.clientY - rect.top - panOffset.y) / zoomLevel
 
-    return { x, y };
-  };
+    return { x, y }
+  }
 
-  return getAdjustedMousePosition;
-};
+  return getAdjustedMousePosition
+}
 
 const ManualChat = () => {
   // Existing state management
@@ -88,19 +87,20 @@ const ManualChat = () => {
   const [isChatEnded, setIsChatEnded] = useState(false)
   const [downloadUrl, setDownloadUrl] = useState(null)
 
-  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false)
 
   // Add state for dynamic canvas dimensions
-  const [originalWidth, setOriginalWidth] = useState(800);
-  const [originalHeight, setOriginalHeight] = useState(600);
+  const [originalWidth, setOriginalWidth] = useState(800)
+  const [originalHeight, setOriginalHeight] = useState(600)
 
   // Add new state for unified history
-  const [annotationHistory, setAnnotationHistory] = useState([]);
-  const [pendingDataURL, setPendingDataURL] = useState(null);
-  const [annotationHistoryIndex, setAnnotationHistoryIndex] = useState(-1);
-  const [hasErased, setHasErased] = useState(false);
+  const [annotationHistory, setAnnotationHistory] = useState([])
+  const [pendingDataURL, setPendingDataURL] = useState(null)
+  const [annotationHistoryIndex, setAnnotationHistoryIndex] = useState(-1)
+  const [hasErased, setHasErased] = useState(false)
   // Add state to track ongoing drawing action
-  const [isDrawing, setIsDrawing] = useState(false);
+  const [isAnnotating, setIsAnnotating] = useState(false)
+  const [isDrawing, setIsDrawing] = useState(isAnnotating)
 
   // Enhanced Reply functionality states
   const [replyingTo, setReplyingTo] = useState(null)
@@ -109,7 +109,6 @@ const ManualChat = () => {
   // Enhanced Canvas annotation states
   const [brushColor, setBrushColor] = useState("#000000")
   const [brushRadius, setBrushRadius] = useState(2)
-  const [isAnnotating, setIsAnnotating] = useState(false)
   const canvasRef = useRef()
 
   // Enhanced Text Annotation States
@@ -131,47 +130,47 @@ const ManualChat = () => {
   })
   useEffect(() => {
     if (selectedImage?.content && showModal && containerRef.current) {
-      const img = new Image();
-      img.src = selectedImage.content;
+      const img = new Image()
+      img.src = selectedImage.content
       img.onload = () => {
-        const container = containerRef.current;
-        const rect = container.getBoundingClientRect();
-        const containerWidth = rect.width;
-        const containerHeight = rect.height;
-        const imgWidth = img.naturalWidth;
-        const imgHeight = img.naturalHeight;
+        const container = containerRef.current
+        const rect = container.getBoundingClientRect()
+        const containerWidth = rect.width
+        const containerHeight = rect.height
+        const imgWidth = img.naturalWidth
+        const imgHeight = img.naturalHeight
 
         // Calculate zoom to fit image within container, capped at 100%
-        const zoomToFitWidth = (containerWidth - 20) / imgWidth; // Add padding
-        const zoomToFitHeight = (containerHeight - 20) / imgHeight; // Add padding
-        const newZoom = Math.min(zoomToFitWidth, zoomToFitHeight, 1);
+        const zoomToFitWidth = (containerWidth - 20) / imgWidth // Add padding
+        const zoomToFitHeight = (containerHeight - 20) / imgHeight // Add padding
+        const newZoom = Math.min(zoomToFitWidth, zoomToFitHeight, 1)
 
         // Set canvas dimensions to image's natural size
-        setOriginalWidth(imgWidth);
-        setOriginalHeight(imgHeight);
+        setOriginalWidth(imgWidth)
+        setOriginalHeight(imgHeight)
 
         // Center the image
-        const scaledWidth = imgWidth * newZoom;
-        const scaledHeight = imgHeight * newZoom;
-        const offsetX = (containerWidth - scaledWidth) / 2;
-        const offsetY = (containerHeight - scaledHeight) / 2;
+        const scaledWidth = imgWidth * newZoom
+        const scaledHeight = imgHeight * newZoom
+        const offsetX = (containerWidth - scaledWidth) / 2
+        const offsetY = (containerHeight - scaledHeight) / 2
 
-        setZoomLevel(newZoom);
-        setPanOffset({ x: offsetX, y: offsetY });
-      };
+        setZoomLevel(newZoom)
+        setPanOffset({ x: offsetX, y: offsetY })
+      }
       img.onerror = () => {
-        console.error("Failed to load image for sizing");
-        setOriginalWidth(800);
-        setOriginalHeight(600);
-        const container = containerRef.current;
-        const rect = container.getBoundingClientRect();
-        const offsetX = (rect.width - 800) / 2;
-        const offsetY = (rect.height - 600) / 2;
-        setZoomLevel(1);
-        setPanOffset({ x: offsetX, y: offsetY });
-      };
+        console.error("Failed to load image for sizing")
+        setOriginalWidth(800)
+        setOriginalHeight(600)
+        const container = containerRef.current
+        const rect = container.getBoundingClientRect()
+        const offsetX = (rect.width - 800) / 2
+        const offsetY = (rect.height - 600) / 2
+        setZoomLevel(1)
+        setPanOffset({ x: offsetX, y: offsetY })
+      }
     }
-  }, [selectedImage, showModal]);
+  }, [selectedImage, showModal])
 
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [textHistory, setTextHistory] = useState([])
@@ -200,7 +199,10 @@ const ManualChat = () => {
   const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 })
 
   // Add ref for previous zoom level
-  const prevZoomRef = useRef(1);
+  const prevZoomRef = useRef(1)
+
+  // Add temp canvas ref for synchronous bitmap preservation during zoom
+  const tempCanvasRef = useRef(null)
 
   // Add participants mapping for better sender resolution
   const [participantsMap, setParticipantsMap] = useState(new Map())
@@ -214,7 +216,7 @@ const ManualChat = () => {
   const shapeCanvasRef = useRef()
 
   // Custom hook for adjusted mouse position
-  const getAdjustedMousePosition = useAdjustedMousePosition(containerRef, zoomLevel, panOffset);
+  const getAdjustedMousePosition = useAdjustedMousePosition(containerRef, zoomLevel, panOffset)
 
   // User data from session storage
   const userData = useMemo(() => {
@@ -227,14 +229,19 @@ const ManualChat = () => {
   // Debounced saveAnnotationState to prevent rapid state saves
   const saveAnnotationState = useCallback(
     debounce(() => {
-      const canvasVector = canvasRef.current ? canvasRef.current.getSaveData() : null;
-      const canvasRaster = hasErased ? (canvasRef.current ? canvasRef.current.canvas.drawing.toDataURL("image/png") : null) : null;
+      const canvasVector = canvasRef.current ? canvasRef.current.getSaveData() : null
+      const canvasRaster = hasErased
+        ? canvasRef.current
+          ? canvasRef.current.canvas.drawing.toDataURL("image/png")
+          : null
+        : null
       const currentState = {
         canvasVector,
-        canvasRaster, textElements: [...textElements],
+        canvasRaster,
+        textElements: [...textElements],
         shapes: [...shapes],
         zoom: zoomLevel,
-      };
+      }
 
       // Only add to history if the state has changed
       if (
@@ -243,38 +250,38 @@ const ManualChat = () => {
       ) {
         setAnnotationHistory((prev) => {
           // Trim history to current index to avoid orphaned future states
-          const newHistory = prev.slice(0, annotationHistoryIndex + 1);
-          newHistory.push(currentState);
-          return newHistory;
-        });
-        setAnnotationHistoryIndex((prev) => prev + 1);
+          const newHistory = prev.slice(0, annotationHistoryIndex + 1)
+          newHistory.push(currentState)
+          return newHistory
+        })
+        setAnnotationHistoryIndex((prev) => prev + 1)
       }
       // Reset hasErased if no raster
-      if (!currentState.canvasRaster) setHasErased(false);
+      if (!currentState.canvasRaster) setHasErased(false)
     }, 100), // Reduced to 100ms for faster response
-    [textElements, shapes, annotationHistoryIndex]
-  );
+    [textElements, shapes, annotationHistoryIndex],
+  )
 
   // Scale canvas drawings when zoom changes
   useEffect(() => {
     if (pendingDataURL && canvasRef.current && isAnnotating) {
-      const drawingCanvas = canvasRef.current.canvas.drawing;
-      const ctx = drawingCanvas.getContext("2d");
-      ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-      const img = new Image();
-      img.src = pendingDataURL;
+      const drawingCanvas = canvasRef.current.canvas.drawing
+      const ctx = drawingCanvas.getContext("2d")
+      ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height)
+      const img = new Image()
+      img.src = pendingDataURL
       img.onload = () => {
-        ctx.drawImage(img, 0, 0, drawingCanvas.width, drawingCanvas.height);
-        setPendingDataURL(null);
-      };
+        ctx.drawImage(img, 0, 0, drawingCanvas.width, drawingCanvas.height)
+        setPendingDataURL(null)
+      }
       img.onerror = () => {
-        console.error("Failed to load pending image");
-        setPendingDataURL(null);
-      };
+        console.error("Failed to load pending image")
+        setPendingDataURL(null)
+      }
     }
+  }, [pendingDataURL, isAnnotating])
 
-  }, [pendingDataURL, isAnnotating]);
-
+  // Keep the vector scaling useEffect as is (only for !hasErased)
   useEffect(() => {
     if (canvasRef.current && isAnnotating) {
       const oldZoom = prevZoomRef.current;
@@ -282,7 +289,7 @@ const ManualChat = () => {
         const saveDataStr = canvasRef.current.getSaveData();
         if (saveDataStr && saveDataStr !== '{"lines":[]}') {
           try {
-            let saveData = JSON.parse(saveDataStr);
+            const saveData = JSON.parse(saveDataStr);
             const scaleFactor = zoomLevel / oldZoom;
             saveData.lines.forEach((line) => {
               line.points.forEach((p) => {
@@ -293,13 +300,23 @@ const ManualChat = () => {
             });
             canvasRef.current.loadSaveData(JSON.stringify(saveData), true);
           } catch (e) {
-            console.error('Failed to scale canvas data', e);
+            console.error("Failed to scale canvas data", e);
           }
         }
         prevZoomRef.current = zoomLevel;
       }
     }
   }, [zoomLevel, isAnnotating, hasErased]);
+
+  // New effect for redrawing preserved bitmap after zoom
+  useEffect(() => {
+    if (tempCanvasRef.current && canvasRef.current && hasErased && isAnnotating) {
+      const drawingCanvas = canvasRef.current.canvas.drawing;
+      const ctx = drawingCanvas.getContext("2d");
+      ctx.drawImage(tempCanvasRef.current, 0, 0, drawingCanvas.width, drawingCanvas.height);
+      tempCanvasRef.current = null;
+    }
+  }, [zoomLevel, hasErased, isAnnotating]);
 
   // Enhanced function to build participants map
   const buildParticipantsMap = useCallback(
@@ -419,26 +436,26 @@ const ManualChat = () => {
   // Modified addTextToHistory to integrate with unified history
   const addTextToHistory = useCallback(
     (elements) => {
-      setTextElements(elements);
-      saveAnnotationState();
+      setTextElements(elements)
+      saveAnnotationState()
     },
     [saveAnnotationState],
-  );
+  )
 
   // Update relevant useEffect and event handlers to save state after changes
   useEffect(() => {
     // Save initial state when starting annotation
     if (isAnnotating && annotationHistory.length === 0) {
-      saveAnnotationState();
+      saveAnnotationState()
     }
-  }, [isAnnotating, saveAnnotationState]);
+  }, [isAnnotating, saveAnnotationState])
 
   const generateTextId = () => `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
   // Modified addTextElement to save state only once
   const addTextElement = useCallback(
     (x, y, text) => {
-      if (!text.trim()) return;
+      if (!text.trim()) return
 
       const newElement = {
         id: generateTextId(),
@@ -456,120 +473,120 @@ const ManualChat = () => {
         padding: textSettings.padding,
         zIndex: textElements.length + 1,
         rotation: 0,
-      };
+      }
 
-      const newElements = [...textElements, newElement];
-      setTextElements(newElements);
-      saveAnnotationState();
-      setTextInput("");
-      setTextPosition(null);
-      setIsAddingText(false);
+      const newElements = [...textElements, newElement]
+      setTextElements(newElements)
+      saveAnnotationState()
+      setTextInput("")
+      setTextPosition(null)
+      setIsAddingText(false)
     },
-    [textElements, textSettings, saveAnnotationState]
-  );
+    [textElements, textSettings, saveAnnotationState],
+  )
 
   // Modified updateTextElement to save state only once
   const updateTextElement = useCallback(
     (id, updates) => {
-      const newElements = textElements.map((el) => (el.id === id ? { ...el, ...updates } : el));
-      setTextElements(newElements);
-      saveAnnotationState();
+      const newElements = textElements.map((el) => (el.id === id ? { ...el, ...updates } : el))
+      setTextElements(newElements)
+      saveAnnotationState()
     },
-    [textElements, saveAnnotationState]
-  );
+    [textElements, saveAnnotationState],
+  )
 
   // Modified deleteTextElement to save state only once
   const deleteTextElement = useCallback(
     (id) => {
-      const newElements = textElements.filter((el) => el.id !== id);
-      setTextElements(newElements);
-      saveAnnotationState();
-      setSelectedTextId(null);
+      const newElements = textElements.filter((el) => el.id !== id)
+      setTextElements(newElements)
+      saveAnnotationState()
+      setSelectedTextId(null)
     },
-    [textElements, saveAnnotationState]
-  );
+    [textElements, saveAnnotationState],
+  )
 
   // Handle drag enter
   const handleDragEnter = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(true);
-  }, []);
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingOver(true)
+  }, [])
 
   // Handle drag over
   const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(true);
-  }, []);
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingOver(true)
+  }, [])
 
   // Handle drag leave
   const handleDragLeave = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingOver(false);
-  }, []);
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDraggingOver(false)
+  }, [])
 
   // Handle drop
   const handleDrop = useCallback(
     (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsDraggingOver(false);
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDraggingOver(false)
 
-      const file = e.dataTransfer.files[0];
+      const file = e.dataTransfer.files[0]
       if (!file) {
-        toast.error("No file dropped");
-        return;
+        toast.error("No file dropped")
+        return
       }
 
       if (!file.type.startsWith("image/")) {
-        toast.error("Only image files are allowed");
-        return;
+        toast.error("Only image files are allowed")
+        return
       }
 
       if (file.size > MAX_FILE_SIZE) {
-        toast.error("File size should not exceed 5MB");
-        return;
+        toast.error("File size should not exceed 5MB")
+        return
       }
 
-      const reader = new FileReader();
+      const reader = new FileReader()
       reader.onload = () => {
         try {
           const fileData = {
             name: file.name,
             type: file.type,
             content: reader.result,
-          };
-          setSelectedImage(fileData);
-          setIsAnnotating(true); // Enable annotation mode for the new image
-          setTextElements([]);
-          setShapes([]);
-          setAnnotationHistory([]);
-          setAnnotationHistoryIndex(-1);
+          }
+          setSelectedImage(fileData)
+          setIsAnnotating(true) // Enable annotation mode for the new image
+          setTextElements([])
+          setShapes([])
+          setAnnotationHistory([])
+          setAnnotationHistoryIndex(-1)
           if (canvasRef.current) {
-            canvasRef.current.clear();
+            canvasRef.current.clear()
           }
         } catch (error) {
-          toast.error("Failed to process dropped image");
-          console.error("Error processing dropped image:", error);
+          toast.error("Failed to process dropped image")
+          console.error("Error processing dropped image:", error)
         }
-      };
+      }
 
       reader.onerror = () => {
-        toast.error("Failed to read dropped image");
-      };
+        toast.error("Failed to read dropped image")
+      }
 
-      reader.readAsDataURL(file);
+      reader.readAsDataURL(file)
     },
-    [MAX_FILE_SIZE]
-  );
+    [MAX_FILE_SIZE],
+  )
 
   // Modified duplicateTextElement to save state only once
   const duplicateTextElement = useCallback(
     (id) => {
-      const element = textElements.find((el) => el.id === id);
-      if (!element) return;
+      const element = textElements.find((el) => el.id === id)
+      if (!element) return
 
       const newElement = {
         ...element,
@@ -577,29 +594,31 @@ const ManualChat = () => {
         x: element.x + 20,
         y: element.y + 20,
         zIndex: textElements.length + 1,
-      };
+      }
 
-      const newElements = [...textElements, newElement];
-      setTextElements(newElements);
-      saveAnnotationState();
-    }, [textElements, saveAnnotationState]);
+      const newElements = [...textElements, newElement]
+      setTextElements(newElements)
+      saveAnnotationState()
+    },
+    [textElements, saveAnnotationState],
+  )
 
   const undoTextAction = useCallback(() => {
     if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      setTextElements([...textHistory[historyIndex - 1]]);
+      setHistoryIndex(historyIndex - 1)
+      setTextElements([...textHistory[historyIndex - 1]])
     } else if (historyIndex === 0) {
-      setHistoryIndex(-1);
-      setTextElements([]);
+      setHistoryIndex(-1)
+      setTextElements([])
     }
-  }, [historyIndex, textHistory]);
+  }, [historyIndex, textHistory])
 
   const redoTextAction = useCallback(() => {
     if (historyIndex < textHistory.length - 1) {
-      setHistoryIndex(historyIndex + 1);
-      setTextElements([...textHistory[historyIndex + 1]]);
+      setHistoryIndex(historyIndex + 1)
+      setTextElements([...textHistory[historyIndex + 1]])
     }
-  }, [historyIndex, textHistory]);
+  }, [historyIndex, textHistory])
 
   // Enhanced Eraser Functions
   const checkShapeCollision = useCallback(
@@ -607,79 +626,81 @@ const ManualChat = () => {
       return shapes.filter((shape) => {
         switch (shape.type) {
           case "rectangle":
-            const rectLeft = Math.min(shape.startX, shape.endX);
-            const rectRight = Math.max(shape.startX, shape.endX);
-            const rectTop = Math.min(shape.startY, shape.endY);
-            const rectBottom = Math.max(shape.startY, shape.endY);
+            const rectLeft = Math.min(shape.startX, shape.endX)
+            const rectRight = Math.max(shape.startX, shape.endX)
+            const rectTop = Math.min(shape.startY, shape.endY)
+            const rectBottom = Math.max(shape.startY, shape.endY)
 
             return (
-              x + radius >= rectLeft &&
-              x - radius <= rectRight &&
-              y + radius >= rectTop &&
-              y - radius <= rectBottom
-            );
+              x + radius >= rectLeft && x - radius <= rectRight && y + radius >= rectTop && y - radius <= rectBottom
+            )
 
           case "circle":
-            const centerX = shape.startX;
-            const centerY = shape.startY;
+            const centerX = shape.startX
+            const centerY = shape.startY
             const shapeRadius = Math.sqrt(
-              Math.pow(shape.endX - shape.startX, 2) + Math.pow(shape.endY - shape.startY, 2)
-            );
-            const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2));
-            return distance <= shapeRadius + radius;
+              Math.pow(shape.endX - shape.startX, 2) + Math.pow(shape.endY - shape.startY, 2),
+            )
+            const distance = Math.sqrt(Math.pow(x - centerX, 2) + Math.pow(y - centerY, 2))
+            return distance <= shapeRadius + radius
 
           case "line":
           case "arrow":
             // Distance from point to line segment
-            const A = x - shape.startX;
-            const B = y - shape.startY;
-            const C = shape.endX - shape.startX;
-            const D = shape.endY - shape.startY;
+            const A = x - shape.startX
+            const B = y - shape.startY
+            const C = shape.endX - shape.startX
+            const D = shape.endY - shape.startY
 
-            const dot = A * C + B * D;
-            const lenSq = C * C + D * D;
-            let param = -1;
-            if (lenSq !== 0) param = dot / lenSq;
+            const dot = A * C + B * D
+            const lenSq = C * C + D * D
+            let param = -1
+            if (lenSq !== 0) param = dot / lenSq
 
-            let xx, yy;
+            let xx, yy
             if (param < 0) {
-              xx = shape.startX;
-              yy = shape.startY;
+              xx = shape.startX
+              yy = shape.startY
             } else if (param > 1) {
-              xx = shape.endX;
-              yy = shape.endY;
+              xx = shape.endX
+              yy = shape.endY
             } else {
-              xx = shape.startX + param * C;
-              yy = shape.startY + param * D;
+              xx = shape.startX + param * C
+              yy = shape.startY + param * D
             }
 
-            const dx = x - xx;
-            const dy = y - yy;
-            const distanceToLine = Math.sqrt(dx * dx + dy * dy);
-            return distanceToLine <= radius + shape.radius;
+            const dx = x - xx
+            const dy = y - yy
+            const distanceToLine = Math.sqrt(dx * dx + dy * dy)
+            return distanceToLine <= radius + shape.radius
 
           default:
-            return false;
+            return false
         }
-      });
+      })
     },
-    [shapes]
-  );
+    [shapes],
+  )
 
-  // Zoom functionality
+  // Modify handleZoom to use pendingDataURL instead of tempCanvasRef
   const handleZoom = useCallback(
     (delta, mouseX = null, mouseY = null) => {
       const zoomFactor = delta > 0 ? 1.1 : 0.9;
       const newZoom = Math.min(Math.max(zoomLevel * zoomFactor, 0.1), 5);
 
       if (newZoom !== zoomLevel) {
-        if (canvasRef.current && isAnnotating) {
-          if (hasErased) {
-            const dataURL = canvasRef.current.canvas.drawing.toDataURL("image/png");
-            canvasRef.current.loadSaveData('{"lines":[]}', true);
-            setPendingDataURL(dataURL);
-          }
+        if (canvasRef.current && isAnnotating && hasErased) {
+          const drawingCanvas = canvasRef.current.canvas.drawing;
+          const oldWidth = drawingCanvas.width;
+          const oldHeight = drawingCanvas.height;
+
+          tempCanvasRef.current = document.createElement("canvas");
+          tempCanvasRef.current.width = oldWidth;
+          tempCanvasRef.current.height = oldHeight;
+          const tempCtx = tempCanvasRef.current.getContext("2d");
+          tempCtx.drawImage(drawingCanvas, 0, 0);
         }
+
         const container = containerRef.current;
         if (container) {
           const rect = container.getBoundingClientRect();
@@ -699,215 +720,232 @@ const ManualChat = () => {
         setZoomLevel(newZoom);
       }
     },
-    [zoomLevel, panOffset, hasErased, isAnnotating]
+    [zoomLevel, panOffset, hasErased, isAnnotating],
   );
+
+  // Add useEffect for redrawing preserved bitmap after zoom
+  useEffect(() => {
+    if (tempCanvasRef.current && canvasRef.current && hasErased && isAnnotating) {
+      const drawingCanvas = canvasRef.current.canvas.drawing;
+      const ctx = drawingCanvas.getContext("2d");
+      ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+      ctx.drawImage(tempCanvasRef.current, 0, 0, drawingCanvas.width, drawingCanvas.height);
+      tempCanvasRef.current = null;
+    }
+  }, [zoomLevel, hasErased, isAnnotating]);
 
   const handleWheel = useCallback(
     (e) => {
-      e.preventDefault();
-      handleZoom(-e.deltaY, e.clientX, e.clientY);
+      e.preventDefault()
+      handleZoom(-e.deltaY, e.clientX, e.clientY)
     },
-    [handleZoom]
-  );
+    [handleZoom],
+  )
 
   const handleFitToScreen = useCallback(() => {
     if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const containerWidth = rect.width;
-      const containerHeight = rect.height;
-      const zoomToFitHeight = (containerHeight - 20) / originalHeight;
-      const newZoom = Math.min(zoomToFitHeight, 5);
-      const scaledWidth = originalWidth * newZoom;
-      const scaledHeight = originalHeight * newZoom;
-      const offsetY = (containerHeight - scaledHeight) / 2;
-      const offsetX = scaledWidth < containerWidth ? (containerWidth - scaledWidth) / 2 : 0;
-      setZoomLevel(newZoom);
-      setPanOffset({ x: offsetX, y: offsetY });
+      const rect = containerRef.current.getBoundingClientRect()
+      const containerWidth = rect.width
+      const containerHeight = rect.height
+      const zoomToFitHeight = (containerHeight - 20) / originalHeight
+      const newZoom = Math.min(zoomToFitHeight, 5)
+      const scaledWidth = originalWidth * newZoom
+      const scaledHeight = originalHeight * newZoom
+      const offsetY = (containerHeight - scaledHeight) / 2
+      const offsetX = scaledWidth < containerWidth ? (containerWidth - scaledWidth) / 2 : 0
+      setZoomLevel(newZoom)
+      setPanOffset({ x: offsetX, y: offsetY })
     }
-  }, [originalWidth, originalHeight]);
+  }, [originalWidth, originalHeight])
 
   const resetZoom = useCallback(() => {
     if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const offsetX = (rect.width - originalWidth) / 2;
-      const offsetY = (rect.height - originalHeight) / 2;
-      setPanOffset({ x: offsetX, y: offsetY });
+      const rect = containerRef.current.getBoundingClientRect()
+      const offsetX = (rect.width - originalWidth) / 2
+      const offsetY = (rect.height - originalHeight) / 2
+      setPanOffset({ x: offsetX, y: offsetY })
     }
-    setZoomLevel(1);
-  }, [originalWidth, originalHeight]);
+    setZoomLevel(1)
+  }, [originalWidth, originalHeight])
 
   // Pan functionality
-  const handleMouseDown = useCallback((e) => {
-    if (e.button === 1 || (e.button === 0 && (e.ctrlKey || !isAnnotating || drawingTool === "pan"))) {
-      // Middle mouse or Ctrl+Left click or Left click in preview mode or pan mode
-      setIsPanning(true);
-      setLastPanPoint({ x: e.clientX, y: e.clientY });
-      e.preventDefault();
-    }
-  }, [isAnnotating, drawingTool]);
+  const handleMouseDown = useCallback(
+    (e) => {
+      if (e.button === 1 || (e.button === 0 && (e.ctrlKey || !isAnnotating || drawingTool === "pan"))) {
+        // Middle mouse or Ctrl+Left click or Left click in preview mode or pan mode
+        setIsPanning(true)
+        setLastPanPoint({ x: e.clientX, y: e.clientY })
+        e.preventDefault()
+      }
+    },
+    [isAnnotating, drawingTool],
+  )
 
   const handleMouseMove = useCallback(
     (e) => {
       if (isPanning) {
-        const deltaX = e.clientX - lastPanPoint.x;
-        const deltaY = e.clientY - lastPanPoint.y;
+        const deltaX = e.clientX - lastPanPoint.x
+        const deltaY = e.clientY - lastPanPoint.y
         setPanOffset((prev) => ({
           x: prev.x + deltaX,
           y: prev.y + deltaY,
-        }));
-        setLastPanPoint({ x: e.clientX, y: e.clientY });
+        }))
+        setLastPanPoint({ x: e.clientX, y: e.clientY })
       }
     },
-    [isPanning, lastPanPoint]
-  );
+    [isPanning, lastPanPoint],
+  )
 
   const handleMouseUp = useCallback(() => {
-    setIsPanning(false);
-  }, []);
+    setIsPanning(false)
+  }, [])
 
   // Shape drawing functions
-  const drawShape = useCallback((ctx, shape) => {
-    const scaledStartX = shape.startX * zoomLevel;
-    const scaledStartY = shape.startY * zoomLevel;
-    const scaledEndX = shape.endX * zoomLevel;
-    const scaledEndY = shape.endY * zoomLevel;
-    const scaledRadius = shape.radius * zoomLevel;
+  const drawShape = useCallback(
+    (ctx, shape) => {
+      const scaledStartX = shape.startX * zoomLevel
+      const scaledStartY = shape.startY * zoomLevel
+      const scaledEndX = shape.endX * zoomLevel
+      const scaledEndY = shape.endY * zoomLevel
+      const scaledRadius = shape.radius * zoomLevel
 
-    ctx.strokeStyle = shape.color;
-    ctx.lineWidth = scaledRadius;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
+      ctx.strokeStyle = shape.color
+      ctx.lineWidth = scaledRadius
+      ctx.lineCap = "round"
+      ctx.lineJoin = "round"
 
-    switch (shape.type) {
-      case "rectangle":
-        ctx.strokeRect(scaledStartX, scaledStartY, scaledEndX - scaledStartX, scaledEndY - scaledStartY);
-        break;
-      case "circle":
-        const radius = Math.sqrt(Math.pow(scaledEndX - scaledStartX, 2) + Math.pow(scaledEndY - scaledStartY, 2));
-        ctx.beginPath();
-        ctx.arc(scaledStartX, scaledStartY, radius, 0, 2 * Math.PI);
-        ctx.stroke();
-        break;
-      case "arrow":
-        const headlen = 10 * zoomLevel;
-        const dx = scaledEndX - scaledStartX;
-        const dy = scaledEndY - scaledStartY;
-        const angle = Math.atan2(dy, dx);
-        ctx.beginPath();
-        ctx.moveTo(scaledStartX, scaledStartY);
-        ctx.lineTo(scaledEndX, scaledEndY);
-        ctx.lineTo(
-          scaledEndX - headlen * Math.cos(angle - Math.PI / 6),
-          scaledEndY - headlen * Math.sin(angle - Math.PI / 6)
-        );
-        ctx.moveTo(scaledEndX, scaledEndY);
-        ctx.lineTo(
-          scaledEndX - headlen * Math.cos(angle + Math.PI / 6),
-          scaledEndY - headlen * Math.sin(angle + Math.PI / 6)
-        );
-        ctx.stroke();
-        break;
-      case "line":
-        ctx.beginPath();
-        ctx.moveTo(scaledStartX, scaledStartY);
-        ctx.lineTo(scaledEndX, scaledEndY);
-        ctx.stroke();
-        break;
-    }
-  }, [zoomLevel]);
+      switch (shape.type) {
+        case "rectangle":
+          ctx.strokeRect(scaledStartX, scaledStartY, scaledEndX - scaledStartX, scaledEndY - scaledStartY)
+          break
+        case "circle":
+          const radius = Math.sqrt(Math.pow(scaledEndX - scaledStartX, 2) + Math.pow(scaledEndY - scaledStartY, 2))
+          ctx.beginPath()
+          ctx.arc(scaledStartX, scaledStartY, radius, 0, 2 * Math.PI)
+          ctx.stroke()
+          break
+        case "arrow":
+          const headlen = 10 * zoomLevel
+          const dx = scaledEndX - scaledStartX
+          const dy = scaledEndY - scaledStartY
+          const angle = Math.atan2(dy, dx)
+          ctx.beginPath()
+          ctx.moveTo(scaledStartX, scaledStartY)
+          ctx.lineTo(scaledEndX, scaledEndY)
+          ctx.lineTo(
+            scaledEndX - headlen * Math.cos(angle - Math.PI / 6),
+            scaledEndY - headlen * Math.sin(angle - Math.PI / 6),
+          )
+          ctx.moveTo(scaledEndX, scaledEndY)
+          ctx.lineTo(
+            scaledEndX - headlen * Math.cos(angle + Math.PI / 6),
+            scaledEndY - headlen * Math.sin(angle + Math.PI / 6),
+          )
+          ctx.stroke()
+          break
+        case "line":
+          ctx.beginPath()
+          ctx.moveTo(scaledStartX, scaledStartY)
+          ctx.lineTo(scaledEndX, scaledEndY)
+          ctx.stroke()
+          break
+      }
+    },
+    [zoomLevel],
+  )
 
   const renderShapes = useCallback(() => {
-    const canvas = shapeCanvasRef.current;
-    if (!canvas) return;
+    const canvas = shapeCanvasRef.current
+    if (!canvas) return
 
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const ctx = canvas.getContext("2d")
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
 
     shapes.forEach((shape) => {
-      drawShape(ctx, shape);
-    });
+      drawShape(ctx, shape)
+    })
 
     if (currentShape) {
-      drawShape(ctx, currentShape);
+      drawShape(ctx, currentShape)
     }
-  }, [shapes, currentShape, drawShape]);
+  }, [shapes, currentShape, drawShape])
 
   useEffect(() => {
-    renderShapes();
-  }, [renderShapes]);
+    renderShapes()
+  }, [renderShapes])
 
   const getEraserCursor = useCallback(() => {
-    const cursorCanvas = document.createElement("canvas");
-    cursorCanvas.width = eraserRadius * 2 + 2;
-    cursorCanvas.height = eraserRadius * 2 + 2;
-    const ctx = cursorCanvas.getContext("2d");
-    ctx.beginPath();
-    ctx.arc(eraserRadius + 1, eraserRadius + 1, eraserRadius, 0, 2 * Math.PI);
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    return `url(${cursorCanvas.toDataURL()}) ${eraserRadius + 1} ${eraserRadius + 1}, auto`;
-  }, [eraserRadius]);
+    const cursorCanvas = document.createElement("canvas")
+    cursorCanvas.width = eraserRadius * 2 + 2
+    cursorCanvas.height = eraserRadius * 2 + 2
+    const ctx = cursorCanvas.getContext("2d")
+    ctx.beginPath()
+    ctx.arc(eraserRadius + 1, eraserRadius + 1, eraserRadius, 0, 2 * Math.PI)
+    ctx.strokeStyle = "#000000"
+    ctx.lineWidth = 1
+    ctx.stroke()
+    return `url(${cursorCanvas.toDataURL()}) ${eraserRadius + 1} ${eraserRadius + 1}, auto`
+  }, [eraserRadius])
 
   // Enhanced Canvas Click Handler
   const handleCanvasClick = useCallback(
     (e) => {
       if (isAddingText) {
-        const canvas = e.currentTarget;
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / zoomLevel;
-        const y = (e.clientY - rect.top) / zoomLevel;
-        setTextPosition({ x, y });
-        e.stopPropagation();
+        const canvas = e.currentTarget
+        const rect = canvas.getBoundingClientRect()
+        const x = (e.clientX - rect.left) / zoomLevel
+        const y = (e.clientY - rect.top) / zoomLevel
+        setTextPosition({ x, y })
+        e.stopPropagation()
       }
     },
-    [isAddingText]
-  );
+    [isAddingText],
+  )
 
   // Modified handleShapeMouseDown to handle eraser for brush strokes and shapes
   const handleShapeMouseDown = useCallback(
     (e) => {
-      const canvas = e.currentTarget;
-      const rect = canvas.getBoundingClientRect();
-      const visual_x = e.clientX - rect.left;
-      const visual_y = e.clientY - rect.top;
-      const logical_x = visual_x / zoomLevel;
-      const logical_y = visual_y / zoomLevel;
+      const canvas = e.currentTarget
+      const rect = canvas.getBoundingClientRect()
+      const visual_x = e.clientX - rect.left
+      const visual_y = e.clientY - rect.top
+      const logical_x = visual_x / zoomLevel
+      const logical_y = visual_y / zoomLevel
 
       if (drawingTool === "eraser") {
-        setIsDrawing(true); // Start continuous erasing
+        setIsDrawing(true) // Start continuous erasing
         if (canvasRef.current) {
-          const drawingCanvas = canvasRef.current.canvas.drawing;
-          const ctx = drawingCanvas.getContext("2d");
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(visual_x, visual_y, eraserRadius, 0, 2 * Math.PI);
-          ctx.clip();
-          ctx.clearRect(visual_x - eraserRadius, visual_y - eraserRadius, eraserRadius * 2, eraserRadius * 2);
-          ctx.restore();
+          const drawingCanvas = canvasRef.current.canvas.drawing
+          const ctx = drawingCanvas.getContext("2d")
+          ctx.save()
+          ctx.beginPath()
+          ctx.arc(visual_x, visual_y, eraserRadius, 0, 2 * Math.PI)
+          ctx.clip()
+          ctx.clearRect(visual_x - eraserRadius, visual_y - eraserRadius, eraserRadius * 2, eraserRadius * 2)
+          ctx.restore()
         }
 
         // Erase shapes
-        const collidingShapes = checkShapeCollision(logical_x, logical_y, eraserRadius / zoomLevel);
+        const collidingShapes = checkShapeCollision(logical_x, logical_y, eraserRadius / zoomLevel)
         if (collidingShapes.length > 0) {
-          let topIndex = -1;
-          let topShape = null;
+          let topIndex = -1
+          let topShape = null
           collidingShapes.forEach((shape) => {
-            const idx = shapes.indexOf(shape);
+            const idx = shapes.indexOf(shape)
             if (idx > topIndex) {
-              topIndex = idx;
-              topShape = shape;
+              topIndex = idx
+              topShape = shape
             }
-          });
+          })
 
           if (topShape) {
-            setShapes((prev) => prev.filter((s) => s !== topShape));
-            saveAnnotationState();
+            setShapes((prev) => prev.filter((s) => s !== topShape))
+            saveAnnotationState()
           }
         }
       } else if (["rectangle", "circle", "arrow", "line"].includes(drawingTool)) {
-        setIsDrawingShape(true);
-        setShapeStart({ x: logical_x, y: logical_y });
+        setIsDrawingShape(true)
+        setShapeStart({ x: logical_x, y: logical_y })
         setCurrentShape({
           type: drawingTool,
           startX: logical_x,
@@ -916,64 +954,75 @@ const ManualChat = () => {
           endY: logical_y,
           color: brushColor,
           radius: brushRadius / zoomLevel,
-        });
+        })
       }
     },
-    [drawingTool, brushColor, brushRadius, eraserRadius, checkShapeCollision, shapes, saveAnnotationState, zoomLevel]
-  );
+    [drawingTool, brushColor, brushRadius, eraserRadius, checkShapeCollision, shapes, saveAnnotationState, zoomLevel],
+  )
 
   // Modified handleShapeMouseMove to handle continuous erasing
   const handleShapeMouseMove = useCallback(
     (e) => {
-      const canvas = e.currentTarget;
-      const rect = canvas.getBoundingClientRect();
-      const visual_x = e.clientX - rect.left;
-      const visual_y = e.clientY - rect.top;
-      const logical_x = visual_x / zoomLevel;
-      const logical_y = visual_y / zoomLevel;
+      const canvas = e.currentTarget
+      const rect = canvas.getBoundingClientRect()
+      const visual_x = e.clientX - rect.left
+      const visual_y = e.clientY - rect.top
+      const logical_x = visual_x / zoomLevel
+      const logical_y = visual_y / zoomLevel
 
       if (isDrawingShape && shapeStart) {
         setCurrentShape((prev) => ({
           ...prev,
           endX: logical_x,
           endY: logical_y,
-        }));
+        }))
       } else if (drawingTool === "eraser" && isDrawing) {
         // Continuous erasing for brush strokes
         if (canvasRef.current) {
-          const drawingCanvas = canvasRef.current.canvas.drawing;
-          const ctx = drawingCanvas.getContext("2d");
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(visual_x, visual_y, eraserRadius, 0, 2 * Math.PI);
-          ctx.clip();
-          ctx.clearRect(visual_x - eraserRadius, visual_y - eraserRadius, eraserRadius * 2, eraserRadius * 2);
-          ctx.restore();
+          const drawingCanvas = canvasRef.current.canvas.drawing
+          const ctx = drawingCanvas.getContext("2d")
+          ctx.save()
+          ctx.beginPath()
+          ctx.arc(visual_x, visual_y, eraserRadius, 0, 2 * Math.PI)
+          ctx.clip()
+          ctx.clearRect(visual_x - eraserRadius, visual_y - eraserRadius, eraserRadius * 2, eraserRadius * 2)
+          ctx.restore()
         }
 
         // Continuous erasing for shapes
-        const collidingShapes = checkShapeCollision(logical_x, logical_y, eraserRadius / zoomLevel);
+        const collidingShapes = checkShapeCollision(logical_x, logical_y, eraserRadius / zoomLevel)
         if (collidingShapes.length > 0) {
-          let topIndex = -1;
-          let topShape = null;
+          let topIndex = -1
+          let topShape = null
           collidingShapes.forEach((shape) => {
-            const idx = shapes.indexOf(shape);
+            const idx = shapes.indexOf(shape)
             if (idx > topIndex) {
-              topIndex = idx;
-              topShape = shape;
+              topIndex = idx
+              topShape = shape
             }
-          });
+          })
 
           if (topShape) {
-            setShapes((prev) => prev.filter((s) => s !== topShape));
-            saveAnnotationState();
+            setShapes((prev) => prev.filter((s) => s !== topShape))
+            saveAnnotationState()
           }
         }
       }
     },
-    [isDrawingShape, shapeStart, drawingTool, eraserRadius, checkShapeCollision, shapes, isDrawing, saveAnnotationState, zoomLevel]
-  );
+    [
+      isDrawingShape,
+      shapeStart,
+      drawingTool,
+      eraserRadius,
+      checkShapeCollision,
+      shapes,
+      isDrawing,
+      saveAnnotationState,
+      zoomLevel,
+    ],
+  )
 
+  // Ensure rasterization after erase in handleShapeMouseUp
   const handleShapeMouseUp = useCallback(() => {
     if (isDrawingShape && currentShape) {
       setShapes((prev) => [...prev, currentShape]);
@@ -985,14 +1034,20 @@ const ManualChat = () => {
     if (drawingTool === "eraser") {
       setIsDrawing(false);
       if (canvasRef.current) {
-        const dataURL = canvasRef.current.canvas.drawing.toDataURL("image/png");
-        canvasRef.current.loadSaveData('{"lines":[]}', true);
-        const ctx = canvasRef.current.canvas.drawing.getContext("2d");
-        const img = new Image();
-        img.src = dataURL;
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0);
-        };
+        const drawingCanvas = canvasRef.current.canvas.drawing;
+        const width = drawingCanvas.width;
+        const height = drawingCanvas.height;
+
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        const tempCtx = tempCanvas.getContext("2d");
+        tempCtx.drawImage(drawingCanvas, 0, 0);
+
+        canvasRef.current.clear();
+
+        const ctx = drawingCanvas.getContext("2d");
+        ctx.drawImage(tempCanvas, 0, 0);
       }
       setHasErased(true);
       saveAnnotationState();
@@ -1002,64 +1057,64 @@ const ManualChat = () => {
   // Enhanced Text Drag Handlers
   const handleTextMouseDown = useCallback(
     (e, textId) => {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault()
+      e.stopPropagation()
 
-      const textElement = textElements.find((el) => el.id === textId);
-      if (!textElement) return;
+      const textElement = textElements.find((el) => el.id === textId)
+      if (!textElement) return
 
-      const canvas = textCanvasRef.current;
-      if (!canvas) return;
+      const canvas = textCanvasRef.current
+      if (!canvas) return
 
-      const rect = canvas.getBoundingClientRect();
-      const canvasX = (e.clientX - rect.left) / zoomLevel;
-      const canvasY = (e.clientY - rect.top) / zoomLevel;
+      const rect = canvas.getBoundingClientRect()
+      const canvasX = (e.clientX - rect.left) / zoomLevel
+      const canvasY = (e.clientY - rect.top) / zoomLevel
 
-      const offsetX = canvasX - textElement.x;
-      const offsetY = canvasY - textElement.y;
+      const offsetX = canvasX - textElement.x
+      const offsetY = canvasY - textElement.y
 
-      setDragOffset({ x: offsetX, y: offsetY });
-      setSelectedTextId(textId);
-      setIsDragging(true);
+      setDragOffset({ x: offsetX, y: offsetY })
+      setSelectedTextId(textId)
+      setIsDragging(true)
 
       const handleMouseMove = (moveEvent) => {
-        if (!canvas) return;
+        if (!canvas) return
 
-        const canvasRect = canvas.getBoundingClientRect();
-        const newCanvasX = (moveEvent.clientX - canvasRect.left) / zoomLevel;
-        const newCanvasY = (moveEvent.clientY - canvasRect.top) / zoomLevel;
+        const canvasRect = canvas.getBoundingClientRect()
+        const newCanvasX = (moveEvent.clientX - canvasRect.left) / zoomLevel
+        const newCanvasY = (moveEvent.clientY - canvasRect.top) / zoomLevel
 
-        const newX = Math.max(0, Math.min(originalWidth - 100, newCanvasX - offsetX));
+        const newX = Math.max(0, Math.min(originalWidth - 100, newCanvasX - offsetX))
         const newY = Math.max(
           textElement.fontSize,
-          Math.min(originalHeight - textElement.fontSize, newCanvasY - offsetY)
-        );
+          Math.min(originalHeight - textElement.fontSize, newCanvasY - offsetY),
+        )
 
-        updateTextElement(textId, { x: newX, y: newY });
-      };
+        updateTextElement(textId, { x: newX, y: newY })
+      }
 
       const handleMouseUp = () => {
-        setIsDragging(false);
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
+        setIsDragging(false)
+        document.removeEventListener("mousemove", handleMouseMove)
+        document.removeEventListener("mouseup", handleMouseUp)
+      }
 
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("mousemove", handleMouseMove)
+      document.addEventListener("mouseup", handleMouseUp)
     },
-    [textElements, updateTextElement, zoomLevel, originalWidth, originalHeight]
-  );
+    [textElements, updateTextElement, zoomLevel, originalWidth, originalHeight],
+  )
 
   // Text Double Click Handler for Editing
   const handleTextDoubleClick = useCallback(
     (textId) => {
-      const element = textElements.find((el) => el.id === textId);
-      if (!element) return;
+      const element = textElements.find((el) => el.id === textId)
+      if (!element) return
 
-      setIsEditingText(true);
-      setEditingTextId(textId);
-      setEditingTextValue(element.text);
-      setSelectedTextId(textId);
+      setIsEditingText(true)
+      setEditingTextId(textId)
+      setEditingTextValue(element.text)
+      setSelectedTextId(textId)
       // Set text settings based on the selected element
       setTextSettings({
         fontSize: element.fontSize,
@@ -1071,17 +1126,17 @@ const ManualChat = () => {
         textAlign: element.textAlign,
         backgroundColor: element.backgroundColor,
         padding: element.padding,
-      });
+      })
 
       setTimeout(() => {
         if (editTextInputRef.current) {
-          editTextInputRef.current.focus();
-          editTextInputRef.current.select();
+          editTextInputRef.current.focus()
+          editTextInputRef.current.select()
         }
-      }, 100);
+      }, 100)
     },
-    [textElements]
-  );
+    [textElements],
+  )
 
   // Save Text Edit
   const saveTextEdit = useCallback(() => {
@@ -1091,99 +1146,99 @@ const ManualChat = () => {
         fontSize: textSettings.fontSize,
         color: textSettings.color,
         fontFamily: textSettings.fontFamily,
-      });
+      })
     }
-    setIsEditingText(false);
-    setEditingTextId(null);
-    setEditingTextValue("");
-  }, [editingTextId, editingTextValue, textSettings, updateTextElement]);
+    setIsEditingText(false)
+    setEditingTextId(null)
+    setEditingTextValue("")
+  }, [editingTextId, editingTextValue, textSettings, updateTextElement])
 
   // Cancel Text Edit
   const cancelTextEdit = useCallback(() => {
-    setIsEditingText(false);
-    setEditingTextId(null);
-    setEditingTextValue("");
-  }, []);
+    setIsEditingText(false)
+    setEditingTextId(null)
+    setEditingTextValue("")
+  }, [])
 
   // Modified handleSendAnnotation to use dynamic canvas dimensions
   const handleSendAnnotation = async () => {
-    setLoading(true);
-    if (!canvasRef.current || !selectedImage?.content) return;
+    setLoading(true)
+    if (!canvasRef.current || !selectedImage?.content) return
 
     try {
-      const drawingCanvas = canvasRef.current.canvas.drawing;
-      const textCanvas = textCanvasRef.current;
-      const shapeCanvas = shapeCanvasRef.current;
+      const drawingCanvas = canvasRef.current.canvas.drawing
+      const textCanvas = textCanvasRef.current
+      const shapeCanvas = shapeCanvasRef.current
 
-      const width = originalWidth; // Use dynamic width
-      const height = originalHeight; // Use dynamic height
+      const width = originalWidth // Use dynamic width
+      const height = originalHeight // Use dynamic height
 
       // Create merged canvas
-      const mergedCanvas = document.createElement("canvas");
-      mergedCanvas.width = width;
-      mergedCanvas.height = height;
-      const ctx = mergedCanvas.getContext("2d");
+      const mergedCanvas = document.createElement("canvas")
+      mergedCanvas.width = width
+      mergedCanvas.height = height
+      const ctx = mergedCanvas.getContext("2d")
 
-      const backgroundImg = new Image();
-      backgroundImg.crossOrigin = "anonymous";
-      backgroundImg.src = selectedImage.content;
+      const backgroundImg = new Image()
+      backgroundImg.crossOrigin = "anonymous"
+      backgroundImg.src = selectedImage.content
 
       backgroundImg.onload = () => {
         // Draw background image at original size
-        ctx.drawImage(backgroundImg, 0, 0, width, height);
+        ctx.drawImage(backgroundImg, 0, 0, width, height)
 
         // Draw shapes
         if (shapeCanvas) {
-          ctx.drawImage(shapeCanvas, 0, 0, width, height);
+          ctx.drawImage(shapeCanvas, 0, 0, width, height)
         }
 
         // Draw drawing annotations
-        ctx.drawImage(drawingCanvas, 0, 0, width, height);
+        ctx.drawImage(drawingCanvas, 0, 0, width, height)
 
         // Draw text annotations
         textElements.forEach((element) => {
-          ctx.font = `${element.fontStyle} ${element.fontWeight} ${element.fontSize}px ${element.fontFamily}`;
-          ctx.fillStyle = element.color;
-          ctx.textAlign = element.textAlign;
-          ctx.textBaseline = "top";
+          ctx.font = `${element.fontStyle} ${element.fontWeight} ${element.fontSize}px ${element.fontFamily}`
+          ctx.fillStyle = element.color
+          ctx.textAlign = element.textAlign
+          ctx.textBaseline = "top"
 
-          let textX = element.x;
+          let textX = element.x
           if (element.textAlign === "center") {
-            textX += element.padding + (element.width || ctx.measureText(element.text).width) / 2;
+            textX += element.padding + (element.width || ctx.measureText(element.text).width) / 2
           } else if (element.textAlign === "right") {
-            textX += element.padding + (element.width || ctx.measureText(element.text).width);
+            textX += element.padding + (element.width || ctx.measureText(element.text).width)
           } else {
-            textX += element.padding;
+            textX += element.padding
           }
 
-          const textY = element.y + element.padding;
+          const textY = element.y + element.padding
 
           if (element.backgroundColor !== "transparent") {
-            const textWidth = ctx.measureText(element.text).width;
-            const textHeight = element.fontSize;
-            ctx.fillStyle = element.backgroundColor;
-            ctx.fillRect(element.x, element.y, textWidth + element.padding * 2, textHeight + element.padding * 2);
-            ctx.fillStyle = element.color;
+            const textWidth = ctx.measureText(element.text).width
+            const textHeight = element.fontSize
+            ctx.fillStyle = element.backgroundColor
+            ctx.fillRect(element.x, element.y, textWidth + element.padding * 2, textHeight + element.padding * 2)
+            ctx.fillStyle = element.color
           }
 
-          ctx.fillText(element.text, textX, textY);
+          ctx.fillText(element.text, textX, textY)
 
           if (element.textDecoration === "underline") {
-            const textWidth = ctx.measureText(element.text).width;
-            const underlineY = textY + element.fontSize + 2;
-            ctx.fillRect(textX, underlineY, textWidth, 1);
+            const textWidth = ctx.measureText(element.text).width
+            const underlineY = textY + element.fontSize + 2
+            ctx.fillRect(textX, underlineY, textWidth, 1)
           }
-        });
+        })
 
-        const mergedDataUrl = mergedCanvas.toDataURL("image/png");
+        const mergedDataUrl = mergedCanvas.toDataURL("image/png")
 
         const annotatedFile = {
           name: `annotated_${selectedImage?.name || "image.png"}`,
           type: "image/png",
           content: mergedDataUrl,
-        };
+        }
 
-        const currentUserInfo = getSenderInfo(userData._id);
+        const currentUserInfo = getSenderInfo(userData._id)
 
         socket.emit("manual_file_upload", {
           room: currentRoomId,
@@ -1202,178 +1257,177 @@ const ManualChat = () => {
               timestamp: replyingTo.originalTimestamp,
             },
           }),
-        });
+        })
 
-        toast.success("Annotated image sent to chat!");
-        setShowModal(false);
-        setIsAnnotating(false);
-        setTextElements([]);
-        setShapes([]);
-        if (replyingTo) cancelReply();
-      };
+        toast.success("Annotated image sent to chat!")
+        setShowModal(false)
+        setIsAnnotating(false)
+        setTextElements([])
+        setShapes([])
+        if (replyingTo) cancelReply()
+      }
 
       backgroundImg.onerror = () => {
-        toast.error("Failed to load background image");
-      };
+        toast.error("Failed to load background image")
+      }
     } catch (error) {
-      toast.error("Failed to send annotated image");
-      console.error("Error sending annotation:", error);
+      toast.error("Failed to send annotated image")
+      console.error("Error sending annotation:", error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   // Modified handleClear to reset history
   const handleClear = useCallback(() => {
     if (canvasRef.current) {
-      canvasRef.current.clear();
+      canvasRef.current.clear()
     }
-    setTextElements([]);
-    setShapes([]);
-    setCurrentShape(null);
-    setAnnotationHistory([]);
-    setAnnotationHistoryIndex(-1);
-    setHasErased(false);
-    saveAnnotationState();
-  }, [saveAnnotationState]);
+    setTextElements([])
+    setShapes([])
+    setCurrentShape(null)
+    setAnnotationHistory([])
+    setAnnotationHistoryIndex(-1)
+    setHasErased(false)
+    saveAnnotationState()
+  }, [saveAnnotationState])
 
   // Modified handleUndo to reliably restore one step back
   const handleUndo = useCallback(() => {
     if (annotationHistoryIndex <= 0) {
       if (canvasRef.current) {
-        canvasRef.current.clear();
+        canvasRef.current.clear()
       }
-      setTextElements([]);
-      setShapes([]);
-      setAnnotationHistoryIndex(0);
-      return;
+      setTextElements([])
+      setShapes([])
+      setAnnotationHistoryIndex(0)
+      return
     }
 
-    const previousIndex = annotationHistoryIndex - 1;
-    const previousState = annotationHistory[previousIndex];
+    const previousIndex = annotationHistoryIndex - 1
+    const previousState = annotationHistory[previousIndex]
 
     if (canvasRef.current) {
-      const drawingCanvas = canvasRef.current.canvas.drawing;
-      const ctx = drawingCanvas.getContext("2d");
-      ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+      const drawingCanvas = canvasRef.current.canvas.drawing
+      const ctx = drawingCanvas.getContext("2d")
+      ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height)
       if (previousState.canvasRaster) {
-        const img = new Image();
-        img.src = previousState.canvasRaster;
+        const img = new Image()
+        img.src = previousState.canvasRaster
         img.onload = () => {
-          ctx.drawImage(img, 0, 0, drawingCanvas.width, drawingCanvas.height);
-          canvasRef.current.loadSaveData('{"lines":[]}', false);
-          setHasErased(true);
-        };
+          ctx.drawImage(img, 0, 0, drawingCanvas.width, drawingCanvas.height)
+          canvasRef.current.loadSaveData('{"lines":[]}', false)
+          setHasErased(true)
+        }
       } else if (previousState.canvasVector) {
         try {
-          let saveData = JSON.parse(previousState.canvasVector);
+          const saveData = JSON.parse(previousState.canvasVector)
           if (saveData) {
-            const scaleFactor = zoomLevel / previousState.zoom;
+            const scaleFactor = zoomLevel / previousState.zoom
             saveData.lines.forEach((line) => {
               line.points.forEach((p) => {
-                p.x *= scaleFactor;
-                p.y *= scaleFactor;
-              });
-              line.brushRadius *= scaleFactor;
-            });
-            canvasRef.current.loadSaveData(JSON.stringify(saveData), true);
-            setHasErased(false);
+                p.x *= scaleFactor
+                p.y *= scaleFactor
+              })
+              line.brushRadius *= scaleFactor
+            })
+            canvasRef.current.loadSaveData(JSON.stringify(saveData), true)
+            setHasErased(false)
           }
         } catch (error) {
-          console.error("Failed to restore canvas:", error);
-          canvasRef.current.clear();
-          setHasErased(false);
+          console.error("Failed to restore canvas:", error)
+          canvasRef.current.clear()
+          setHasErased(false)
         }
       }
     }
 
-    setTextElements([...previousState.textElements]);
-    setShapes([...previousState.shapes]);
-    setAnnotationHistoryIndex(previousIndex);
-  }, [annotationHistory, annotationHistoryIndex, zoomLevel]);
+    setTextElements([...previousState.textElements])
+    setShapes([...previousState.shapes])
+    setAnnotationHistoryIndex(previousIndex)
+  }, [annotationHistory, annotationHistoryIndex, zoomLevel])
 
   // Add handleRedo to restore undone steps
   const handleRedo = useCallback(() => {
     if (annotationHistoryIndex >= annotationHistory.length - 1) {
-      return;
+      return
     }
 
-    const nextIndex = annotationHistoryIndex + 1;
-    const nextState = annotationHistory[nextIndex];
+    const nextIndex = annotationHistoryIndex + 1
+    const nextState = annotationHistory[nextIndex]
 
     if (canvasRef.current) {
-      const drawingCanvas = canvasRef.current.canvas.drawing;
-      const ctx = drawingCanvas.getContext("2d");
-      ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+      const drawingCanvas = canvasRef.current.canvas.drawing
+      const ctx = drawingCanvas.getContext("2d")
+      ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height)
       if (nextState.canvasRaster) {
-        const img = new Image();
-        img.src = nextState.canvasRaster;
+        const img = new Image()
+        img.src = nextState.canvasRaster
         img.onload = () => {
-          ctx.drawImage(img, 0, 0, drawingCanvas.width, drawingCanvas.height);
-          canvasRef.current.loadSaveData('{"lines":[]}', false);
-          setHasErased(true);
-        };
+          ctx.drawImage(img, 0, 0, drawingCanvas.width, drawingCanvas.height)
+          canvasRef.current.loadSaveData('{"lines":[]}', false)
+          setHasErased(true)
+        }
       } else if (nextState.canvasVector) {
         try {
-          let saveData = JSON.parse(nextState.canvasVector);
+          const saveData = JSON.parse(nextState.canvasVector)
           if (saveData) {
-            const scaleFactor = zoomLevel / nextState.zoom;
+            const scaleFactor = zoomLevel / nextState.zoom
             saveData.lines.forEach((line) => {
               line.points.forEach((p) => {
-                p.x *= scaleFactor;
-                p.y *= scaleFactor;
-              });
-              line.brushRadius *= scaleFactor;
-            });
-            canvasRef.current.loadSaveData(JSON.stringify(saveData), true);
-            setHasErased(false);
+                p.x *= scaleFactor
+                p.y *= scaleFactor
+              })
+              line.brushRadius *= scaleFactor
+            })
+            canvasRef.current.loadSaveData(JSON.stringify(saveData), true)
+            setHasErased(false)
           }
         } catch (error) {
-          console.error("Failed to restore canvas:", error);
-          canvasRef.current.clear();
-          setHasErased(false);
+          console.error("Failed to restore canvas:", error)
+          canvasRef.current.clear()
+          setHasErased(false)
         }
       }
     }
 
-    setTextElements([...nextState.textElements]);
-    setShapes([...nextState.shapes]);
-    setAnnotationHistoryIndex(nextIndex);
-  }, [annotationHistory, annotationHistoryIndex, zoomLevel]);
+    setTextElements([...nextState.textElements])
+    setShapes([...nextState.shapes])
+    setAnnotationHistoryIndex(nextIndex)
+  }, [annotationHistory, annotationHistoryIndex, zoomLevel])
 
   // Handle click outside text elements to unselect
   const handleCanvasWrapperClick = useCallback(
     (e) => {
       if (isDragging) {
-        return;
+        return
       }
 
-      const clickedOnTextElement = e.target.closest(".text-element");
-      const clickedOnTextInput = e.target.closest(".form-control.form-control-sm");
-      const clickedOnEditTextModalContent = e.target.closest(".chat-screen-text-edit-modal");
+      const clickedOnTextElement = e.target.closest(".text-element")
+      const clickedOnTextInput = e.target.closest(".form-control.form-control-sm")
+      const clickedOnEditTextModalContent = e.target.closest(".chat-screen-text-edit-modal")
 
       if (!clickedOnTextElement && !clickedOnTextInput && !clickedOnEditTextModalContent) {
-        setSelectedTextId(null);
+        setSelectedTextId(null)
         if (isAddingText && !textInput.trim()) {
-          setTextPosition(null);
-          setIsAddingText(false);
+          setTextPosition(null)
+          setIsAddingText(false)
         }
       }
     },
-    [isDragging, isAddingText, textInput]
-  );
+    [isDragging, isAddingText, textInput],
+  )
 
   // Check for mobile view
   useEffect(() => {
     const handleResize = () => {
-      setIsMobileView(window.innerWidth < 768);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+      setIsMobileView(window.innerWidth < 768)
+    }
+    handleResize()
+    window.addEventListener("resize", handleResize)
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
 
-  // Modified CanvasDraw mouse events to ensure state is saved only on completion
   useEffect(() => {
     if (canvasRef.current) {
       const canvas = canvasRef.current.canvas.drawing;
@@ -1382,6 +1436,22 @@ const ManualChat = () => {
       };
       const handleDrawEnd = () => {
         if (isDrawing) {
+          if (drawingTool === "brush" && hasErased) {
+            const drawingCanvas = canvasRef.current.canvas.drawing;
+            const width = drawingCanvas.width;
+            const height = drawingCanvas.height;
+
+            const tempCanvas = document.createElement("canvas");
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+            const tempCtx = tempCanvas.getContext("2d");
+            tempCtx.drawImage(drawingCanvas, 0, 0);
+
+            canvasRef.current.clear();
+
+            const ctx = drawingCanvas.getContext("2d");
+            ctx.drawImage(tempCanvas, 0, 0);
+          }
           saveAnnotationState();
           setIsDrawing(false);
         }
@@ -1397,184 +1467,184 @@ const ManualChat = () => {
         canvas.removeEventListener("mouseleave", handleDrawEnd);
       };
     }
-  }, [isDrawing, saveAnnotationState]);
+  }, [isDrawing, saveAnnotationState, drawingTool, hasErased]);
 
   // Handle image click
   const handleImageClick = (image) => {
-    setSelectedImage(image);
-    setShowModal(true);
-    setIsAnnotating(false);
-    setTextElements([]);
-    setTextHistory([]);
-    setHistoryIndex(-1);
-    setShapes([]);
-    setZoomLevel(1);
-    setPanOffset({ x: 0, y: 0 });
-  };
+    setSelectedImage(image)
+    setShowModal(true)
+    setIsAnnotating(false)
+    setTextElements([])
+    setTextHistory([])
+    setHistoryIndex(-1)
+    setShapes([])
+    setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
+  }
 
   // Handle modal close
   const handleCloseModal = () => {
-    setShowModal(false);
-    setIsAnnotating(false);
-    setTextElements([]);
-    setTextHistory([]);
-    setHistoryIndex(-1);
-    setShapes([]);
-    setZoomLevel(1);
-    setPanOffset({ x: 0, y: 0 });
+    setShowModal(false)
+    setIsAnnotating(false)
+    setTextElements([])
+    setTextHistory([])
+    setHistoryIndex(-1)
+    setShapes([])
+    setZoomLevel(1)
+    setPanOffset({ x: 0, y: 0 })
     if (canvasRef.current) {
-      canvasRef.current.clear();
+      canvasRef.current.clear()
     }
-  };
+  }
 
   // Download URL effect
   useEffect(() => {
-    if (!selectedImage?.content) return;
+    if (!selectedImage?.content) return
 
-    let url;
+    let url
     if (typeof selectedImage.content === "string" && selectedImage.content.startsWith("data:image")) {
-      url = selectedImage.content;
+      url = selectedImage.content
     } else if (Array.isArray(selectedImage.content)) {
-      const byteArray = new Uint8Array(selectedImage.content);
-      const blob = new Blob([byteArray], { type: selectedImage.type || "image/jpeg" });
-      url = URL.createObjectURL(blob);
+      const byteArray = new Uint8Array(selectedImage.content)
+      const blob = new Blob([byteArray], { type: selectedImage.type || "image/jpeg" })
+      url = URL.createObjectURL(blob)
     }
 
-    setDownloadUrl(url);
+    setDownloadUrl(url)
 
     return () => {
-      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
-    };
-  }, [selectedImage]);
+      if (url?.startsWith("blob:")) URL.revokeObjectURL(url)
+    }
+  }, [selectedImage])
 
   // Enhanced download function
   const handleBase64Download = () => {
     try {
-      const base64Data = downloadUrl;
+      const base64Data = downloadUrl
       if (!base64Data || typeof base64Data !== "string" || !base64Data.startsWith("data:")) {
-        console.error("Invalid base64 data");
-        return;
+        console.error("Invalid base64 data")
+        return
       }
 
-      const parts = base64Data.split(",");
-      const byteString = atob(parts[1]);
-      const mimeString = parts[0].split(":")[1].split(";")[0];
+      const parts = base64Data.split(",")
+      const byteString = atob(parts[1])
+      const mimeString = parts[0].split(":")[1].split(";")[0]
 
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
+      const ab = new ArrayBuffer(byteString.length)
+      const ia = new Uint8Array(ab)
       for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
+        ia[i] = byteString.charCodeAt(i)
       }
 
-      const blob = new Blob([ia], { type: mimeString });
-      const blobUrl = URL.createObjectURL(blob);
+      const blob = new Blob([ia], { type: mimeString })
+      const blobUrl = URL.createObjectURL(blob)
 
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = "annotated-image.png";
-      link.target = "_blank";
-      document.body.appendChild(link);
+      const link = document.createElement("a")
+      link.href = blobUrl
+      link.download = "annotated-image.png"
+      link.target = "_blank"
+      document.body.appendChild(link)
 
       requestAnimationFrame(() => {
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-      });
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(blobUrl)
+      })
     } catch (error) {
-      console.error("Error during base64 download:", error);
+      console.error("Error during base64 download:", error)
     }
-  };
+  }
 
-  const id = userData?._id || "";
-  const role = userData?.role || "";
+  const id = userData?._id || ""
+  const role = userData?.role || ""
 
   // Handle mobile view chat selection
   const handleChatSelection = (chatId, chat) => {
-    handleChatStart(chatId);
-    setSelectedChat(chat);
+    handleChatStart(chatId)
+    setSelectedChat(chat)
     if (isMobileView) {
-      setShowChatList(false);
+      setShowChatList(false)
     }
-  };
+  }
 
   // Back to chat list (mobile)
   const handleBackToList = () => {
-    setShowChatList(true);
-  };
+    setShowChatList(true)
+  }
 
   const fetchWithRetry = async (url, retries = 3, delay = 1000) => {
     for (let i = 0; i < retries; i++) {
       try {
-        return await axios.get(url);
+        return await axios.get(url)
       } catch (error) {
-        if (i === retries - 1) throw error;
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        console.log(`Retrying fetch attempt ${i + 1}...`);
+        if (i === retries - 1) throw error
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        console.log(`Retrying fetch attempt ${i + 1}...`)
       }
     }
-  };
+  }
 
   // Fetch group chat status
   useEffect(() => {
     const fetchGroupChatStatus = async () => {
-      setLoading(true);
-      if (!currentRoomId) return;
+      setLoading(true)
+      if (!currentRoomId) return
 
-      setIsFetchingChatStatus(true);
+      setIsFetchingChatStatus(true)
       try {
         const { data } = await fetchWithRetry(
-          `${ENDPOINT}api/v1/get-chat-by-id/${currentRoomId}?role=${userData?.role}`
-        );
-        const chatData = data.data;
-        setIsAbleToJoinChat(chatData.isChatStarted);
+          `${ENDPOINT}api/v1/get-chat-by-id/${currentRoomId}?role=${userData?.role}`,
+        )
+        const chatData = data.data
+        setIsAbleToJoinChat(chatData.isChatStarted)
       } catch (error) {
-        console.log("Internal server error", error);
-        toast.error("Failed to fetch chat status");
-        setIsAbleToJoinChat(false);
+        console.log("Internal server error", error)
+        toast.error("Failed to fetch chat status")
+        setIsAbleToJoinChat(false)
       } finally {
-        setLoading(false);
-        setIsFetchingChatStatus(false);
+        setLoading(false)
+        setIsFetchingChatStatus(false)
       }
-    };
+    }
 
     if (currentRoomId) {
-      fetchGroupChatStatus();
+      fetchGroupChatStatus()
     }
-  }, [currentRoomId]);
+  }, [currentRoomId])
 
   // Fetch group chat history
   const fetchGroupChatHistory = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     if (!userData) {
-      toast.error("Please login first");
-      return;
+      toast.error("Please login first")
+      return
     }
 
     try {
       const url =
         userData?.role === "provider"
           ? `${ENDPOINT}api/v1/get_manual_chat_by_providerId/${userData._id}`
-          : `${ENDPOINT}api/v1/get_manual_chat_by_userId/${userData._id}`;
+          : `${ENDPOINT}api/v1/get_manual_chat_by_userId/${userData._id}`
 
-      const { data } = await axios.get(url);
-      setAllGroupChats(data.data.reverse());
+      const { data } = await axios.get(url)
+      setAllGroupChats(data.data.reverse())
     } catch (error) {
-      toast.error(error?.response?.data?.message);
+      toast.error(error?.response?.data?.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [userData]);
+  }, [userData])
 
   useEffect(() => {
-    fetchGroupChatHistory();
-  }, [fetchGroupChatHistory]);
+    fetchGroupChatHistory()
+  }, [fetchGroupChatHistory])
 
   // Get group members excluding current user
   const getGroupMembers = useCallback(
     (chat) => {
-      if (!chat || !userData) return [];
+      if (!chat || !userData) return []
 
-      const members = [];
+      const members = []
 
       // Add user if current user is not the user
       if (chat.userId && chat.userId._id !== userData._id) {
@@ -1583,7 +1653,7 @@ const ManualChat = () => {
           name: chat.userId.name,
           role: "user",
           phoneNumber: chat.userId.PhoneNumber,
-        });
+        })
       }
 
       // Add providers if current user is not in the provider list
@@ -1595,100 +1665,100 @@ const ManualChat = () => {
               name: provider.name,
               role: "provider",
               phoneNumber: provider.mobileNumber,
-            });
+            })
           }
         })
       }
 
-      return members;
+      return members
     },
-    [userData]
-  );
+    [userData],
+  )
 
   const handleCallMember = useCallback(
     async (member, selectedChat) => {
-      setLoading(true);
+      setLoading(true)
       if (!userData) {
-        toast.error("Please login first");
-        return;
+        toast.error("Please login first")
+        return
       }
 
-      const phoneNumber = member?.phoneNumber;
+      const phoneNumber = member?.phoneNumber
       if (!phoneNumber) {
-        toast.error(`No phone number available for ${member?.name || "this member"}`);
-        return;
+        toast.error(`No phone number available for ${member?.name || "this member"}`)
+        return
       }
 
-      const cleanedNumber = phoneNumber.replace(/[^+\d]/g, "");
+      const cleanedNumber = phoneNumber.replace(/[^+\d]/g, "")
 
       try {
         if (cleanedNumber) {
-          const room = selectedChat?._id;
-          const callFrom = userData.mobileNumber || userData.PhoneNumber;
-          const callTo = member?.phoneNumber;
+          const room = selectedChat?._id
+          const callFrom = userData.mobileNumber || userData.PhoneNumber
+          const callTo = member?.phoneNumber
 
-          console.log("all detail =", room, callFrom, callTo);
+          console.log("all detail =", room, callFrom, callTo)
           const res = await axios.post(`${ENDPOINT}api/v1/create_call_for_free`, {
             roomId: room,
             callFrom,
             callTo,
-          });
-          toast.success(`Calling ${member.name}...`);
+          })
+          toast.success(`Calling ${member.name}...`)
         } else {
-          toast.error("Invalid phone number");
+          toast.error("Invalid phone number")
         }
       } catch (error) {
-        console.log("Internal server error", error);
+        console.log("Internal server error", error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     },
-    [userData]
-  );
+    [userData],
+  )
 
   // Handle selecting a group chat from the sidebar
   const handleChatStart = useCallback(
     async (chatId) => {
-      if (!chatId) return;
+      if (!chatId) return
 
       try {
-        const { data } = await axios.get(`${ENDPOINT}api/v1/get-chat-by-id/${chatId}?role=${userData?.role}`);
-        const chatData = data.data;
+        const { data } = await axios.get(`${ENDPOINT}api/v1/get-chat-by-id/${chatId}?role=${userData?.role}`)
+        const chatData = data.data
 
         if (!chatData) {
-          toast.error("Group chat not found");
-          return;
+          toast.error("Group chat not found")
+          return
         }
 
-        const userId = chatData?.userId?._id;
-        const providerIds = chatData?.providerIds?.map((provider) => provider._id) || [];
+        const userId = chatData?.userId?._id
+        const providerIds = chatData?.providerIds?.map((provider) => provider._id) || []
 
-        setChatData(chatData || {});
-        setSelectedChat(chatData);
-        setGroupName(chatData?.groupName || "Group Chat");
+        setChatData(chatData || {})
+        setSelectedChat(chatData)
+        setGroupName(chatData?.groupName || "Group Chat")
 
         // Build participants map first
-        buildParticipantsMap(chatData);
+        buildParticipantsMap(chatData)
 
         // Then set messages with enhanced sender info
         const enhancedMessages = (chatData.messages || []).map((msg) => {
-          const senderInfo = getSenderInfo(msg.sender);
+          const senderInfo = getSenderInfo(msg.sender)
           return {
             ...msg,
             senderName: senderInfo.name,
             senderRole: senderInfo.role,
-          };
-        });
+          }
+        })
 
-        setMessages(enhancedMessages);
-        setSelectedUserId(userId);
-        setSelectedProviderIds(providerIds);
-        setIsChatBoxActive(true);
-        setCurrentRoomId(chatId);
-        setIsChatStarted(true);
-        setIsChatOnGoing(true);
-        setGroupMembers(getGroupMembers(chatData));
-        setIsChatEnded(chatData?.isGroupChatEnded);
+        setMessages(enhancedMessages)
+        setSelectedUserId(userId)
+        setSelectedProviderIds(providerIds)
+        setIsChatBoxActive(true)
+        setCurrentRoomId(chatId)
+        setIsChatStarted(true)
+        setIsChatOnGoing(true)
+        setGroupMembers(getGroupMembers(chatData))
+        setIsChatEnded(chatData?.isGroupChatEnded)
 
         // Auto-join the room
         if (userData?.role === "provider") {
@@ -1697,21 +1767,21 @@ const ManualChat = () => {
             astrologerId: userData._id,
             role: "provider",
             room: chatId,
-          });
+          })
         } else {
           socket.emit("join_manual_room", {
             userId: userId,
             astrologerId: providerIds[0],
             role: userData.role,
             room: chatId,
-          });
+          })
         }
       } catch (error) {
-        toast.error("Failed to load group chat details");
+        toast.error("Failed to load group chat details")
       }
     },
-    [userData, socket, getGroupMembers, buildParticipantsMap, getSenderInfo]
-  );
+    [userData, socket, getGroupMembers, buildParticipantsMap, getSenderInfo],
+  )
 
   const endGroupChat = useCallback(() => {
     try {
@@ -1720,86 +1790,86 @@ const ManualChat = () => {
         astrologerId: userData?.role === "provider" ? userData._id : selectedProviderIds[0],
         role: userData?.role,
         room: currentRoomId,
-      });
+      })
 
-      setIsChatStarted(false);
-      setIsChatBoxActive(false);
-      setIsActive(false);
-      setIsChatOnGoing(false);
-      setConnectedProviders(new Set());
-      setGroupMembers([]);
-      fetchGroupChatHistory();
+      setIsChatStarted(false)
+      setIsChatBoxActive(false)
+      setIsActive(false)
+      setIsChatOnGoing(false)
+      setConnectedProviders(new Set())
+      setGroupMembers([])
+      fetchGroupChatHistory()
     } catch (error) {
-      toast.error("Failed to end group chat properly");
-      console.error("Error ending group chat:", error);
+      toast.error("Failed to end group chat properly")
+      console.error("Error ending group chat:", error)
     }
-  }, [socket, selectedUserId, selectedProviderIds, userData, currentRoomId, fetchGroupChatHistory]);
+  }, [socket, selectedUserId, selectedProviderIds, userData, currentRoomId, fetchGroupChatHistory])
 
   // Navigation handling
   useEffect(() => {
     const handleClick = (e) => {
-      if (!isChatOnGoing) return;
+      if (!isChatOnGoing) return
 
-      const link = e.target.closest("a");
+      const link = e.target.closest("a")
       if (link && link.href && !link.target) {
-        const url = new URL(link.href);
+        const url = new URL(link.href)
         if (url.pathname !== window.location.pathname) {
-          e.preventDefault();
-          const fullPath = url.pathname + url.search + url.hash;
-          setNextPath(fullPath);
-          setShowPrompt(true);
+          e.preventDefault()
+          const fullPath = url.pathname + url.search + url.hash
+          setNextPath(fullPath)
+          setShowPrompt(true)
         }
       }
-    };
+    }
 
-    document.body.addEventListener("click", handleClick);
-    return () => document.body.removeEventListener("click", handleClick);
-  }, [isChatOnGoing]);
+    document.body.addEventListener("click", handleClick)
+    return () => document.body.removeEventListener("click", handleClick)
+  }, [isChatOnGoing])
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
       if (isChatOnGoing && !isUserConfirming) {
-        e.preventDefault();
-        e.returnValue = "";
-        return "";
+        e.preventDefault()
+        e.returnValue = ""
+        return ""
       }
-    };
+    }
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isChatOnGoing, isUserConfirming]);
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [isChatOnGoing, isUserConfirming])
 
   const confirmNavigation = async () => {
-    setIsUserConfirming(true);
-    await endGroupChat();
-    setShowPrompt(false);
+    setIsUserConfirming(true)
+    await endGroupChat()
+    setShowPrompt(false)
     if (nextPath) {
-      navigate(nextPath, { replace: true });
-      setNextPath(null);
+      navigate(nextPath, { replace: true })
+      setNextPath(null)
     } else {
-      window.location.reload();
+      window.location.reload()
     }
-  };
+  }
 
   const cancelNavigation = () => {
-    setNextPath(null);
-    setShowPrompt(false);
-  };
+    setNextPath(null)
+    setShowPrompt(false)
+  }
 
   // Socket event listeners for group chat
   useEffect(() => {
     socket.on("connect", () => {
-      setSocketId(socket.id);
+      setSocketId(socket.id)
       socket.emit("send_socket_id", {
         socketId: socket.id,
         role: userData?.role,
         userId: id,
-      });
-    });
+      })
+    })
 
     socket.on("return_message", (data) => {
-      console.log("Received message from others:", data);
-      const senderInfo = getSenderInfo(data.sender || data.senderId);
+      console.log("Received message from others:", data)
+      const senderInfo = getSenderInfo(data.sender || data.senderId)
 
       const messageObj = {
         ...data,
@@ -1807,129 +1877,129 @@ const ManualChat = () => {
         sender: data.sender || data.senderId,
         senderName: data.senderName || senderInfo.name,
         senderRole: data.senderRole || senderInfo.role,
-      };
+      }
 
       if (data.file) {
         messageObj.file = {
           name: data.file.name,
           type: data.file.type,
           content: data.file.content,
-        };
+        }
       }
 
       if (data.replyTo) {
-        messageObj.replyTo = data.replyTo;
+        messageObj.replyTo = data.replyTo
       }
 
-      setMessages((prev) => [...prev, messageObj]);
-    });
+      setMessages((prev) => [...prev, messageObj])
+    })
 
     socket.on("user_status", ({ userId, astrologerId, status, role }) => {
       if (role === "provider") {
         setConnectedProviders((prev) => {
-          const newSet = new Set(prev);
+          const newSet = new Set(prev)
           if (status === "online") {
-            newSet.add(astrologerId);
+            newSet.add(astrologerId)
           } else {
-            newSet.delete(astrologerId);
+            newSet.delete(astrologerId)
           }
-          return newSet;
-        });
+          return newSet
+        })
       }
-      setStatus(status);
-    });
+      setStatus(status)
+    })
 
     socket.on("room_joined", (data) => {
-      console.log("Room joined:", data.message);
-    });
+      console.log("Room joined:", data.message)
+    })
 
     socket.on("error_message", (data) => {
-      toast.error(data.message);
-      setIsChatBoxActive(false);
-    });
+      toast.error(data.message)
+      setIsChatBoxActive(false)
+    })
 
     socket.on("wrong_message", (data) => {
-      toast.error(data.message);
-    });
+      toast.error(data.message)
+    })
 
     socket.on("message_sent", (data) => {
-      console.log("Message sent confirmation:", data);
-    });
+      console.log("Message sent confirmation:", data)
+    })
 
     socket.on("chat_ended", (data) => {
       if (data.success) {
-        setIsChatStarted(false);
-        setIsChatBoxActive(false);
-        setIsActive(false);
-        setIsAbleToJoinChat(false);
-        setConnectedProviders(new Set());
-        setGroupMembers([]);
-        toast.success("Group chat ended successfully");
+        setIsChatStarted(false)
+        setIsChatBoxActive(false)
+        setIsActive(false)
+        setIsAbleToJoinChat(false)
+        setConnectedProviders(new Set())
+        setGroupMembers([])
+        toast.success("Group chat ended successfully")
       } else {
-        toast.error(data.message || "Error ending group chat");
+        toast.error(data.message || "Error ending group chat")
       }
-    });
+    })
 
     return () => {
-      socket.off("connect");
-      socket.off("return_message");
-      socket.off("message_sent");
-      socket.off("user_status");
-      socket.off("room_joined");
-      socket.off("error_message");
-      socket.off("wrong_message");
-      socket.off("message_sent");
-      socket.off("file_upload_success");
-      socket.off("file_upload_error");
-      socket.off("chat_ended");
-    };
-  }, [id, socket, userData, selectedProviderIds, getSenderInfo]);
+      socket.off("connect")
+      socket.off("return_message")
+      socket.off("message_sent")
+      socket.off("user_status")
+      socket.off("room_joined")
+      socket.off("error_message")
+      socket.off("wrong_message")
+      socket.off("message_sent")
+      socket.off("file_upload_success")
+      socket.off("file_upload_error")
+      socket.off("chat_ended")
+    }
+  }, [id, socket, userData, selectedProviderIds, getSenderInfo])
 
   // Content validation for messages
   const validateMessageContent = useCallback((messageText) => {
     if (!messageText || typeof messageText !== "string" || messageText.trim() === "") {
-      return false;
+      return false
     }
 
     const prohibitedPatterns = [
       /\b\d{10}\b/,
       /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/,
       /18\+|\bsex\b|\bxxx\b|\bcall\b|\bphone\b|\bmobile|\bteliphone\b|\bnudes\b|\bporn\b|\bsex\scall\b|\btext\b|\bwhatsapp\b|\bskype\b|\btelegram\b|\bfacetime\b|\bvideo\schat\b|\bdial\snumber\b|\bmessage\b/i,
-    ];
+    ]
 
-    return !prohibitedPatterns.some((pattern) => pattern.test(messageText));
-  }, []);
+    return !prohibitedPatterns.some((pattern) => pattern.test(messageText))
+  }, [])
 
   // Enhanced file upload handler
   const handleFileChange = useCallback(
     (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
+      const file = event.target.files[0]
+      if (!file) return
 
       if (!file.type.startsWith("image/")) {
-        toast.error("Only image files are allowed");
-        event.target.value = "";
-        return;
+        toast.error("Only image files are allowed")
+        event.target.value = ""
+        return
       }
 
       if (file.size > MAX_FILE_SIZE) {
-        toast.error("File size should not exceed 5MB");
-        event.target.value = "";
-        return;
+        toast.error("File size should not exceed 5MB")
+        event.target.value = ""
+        return
       }
 
-      const uploadingToast = toast.loading("Uploading file...");
+      const uploadingToast = toast.loading("Uploading file...")
 
-      const reader = new FileReader();
+      const reader = new FileReader()
       reader.onload = () => {
         try {
           const fileData = {
             name: file.name,
             type: file.type,
             content: reader.result,
-          };
+          }
 
-          const currentUserInfo = getSenderInfo(userData._id);
+          const currentUserInfo = getSenderInfo(userData._id)
 
           socket.emit("manual_file_upload", {
             room: currentRoomId,
@@ -1948,71 +2018,71 @@ const ManualChat = () => {
                 timestamp: replyingTo.originalTimestamp,
               },
             }),
-          });
+          })
 
-          toast.dismiss(uploadingToast);
-          if (replyingTo) cancelReply();
+          toast.dismiss(uploadingToast)
+          if (replyingTo) cancelReply()
         } catch (error) {
-          toast.dismiss(uploadingToast);
-          toast.error("Failed to process file");
+          toast.dismiss(uploadingToast)
+          toast.error("Failed to process file")
         }
-      };
+      }
 
       reader.onerror = () => {
-        toast.dismiss(uploadingToast);
-        toast.error("Failed to read file");
-      };
+        toast.dismiss(uploadingToast)
+        toast.error("Failed to read file")
+      }
 
-      reader.readAsDataURL(file);
-      event.target.value = "";
+      reader.readAsDataURL(file)
+      event.target.value = ""
     },
-    [userData, currentRoomId, socket, replyingTo, cancelReply, getSenderInfo]
-  );
+    [userData, currentRoomId, socket, replyingTo, cancelReply, getSenderInfo],
+  )
 
   const handleUpdateGroupName = useCallback(
     async (newGroupName) => {
       if (!newGroupName || typeof newGroupName !== "string") {
-        toast.error("Invalid group name");
-        return;
+        toast.error("Invalid group name")
+        return
       }
 
       try {
         const response = await axios.put(`${ENDPOINT}api/v1/update_group_name/${currentRoomId}`, {
           groupName: newGroupName,
-        });
+        })
 
         if (response.data.success) {
-          toast.success("Group name updated successfully");
-          setGroupName(newGroupName);
+          toast.success("Group name updated successfully")
+          setGroupName(newGroupName)
         } else {
-          toast.error("Failed to update group name");
+          toast.error("Failed to update group name")
         }
       } catch (error) {
-        toast.error("An error occurred while updating group name");
+        toast.error("An error occurred while updating group name")
       }
     },
-    [currentRoomId]
-  );
+    [currentRoomId],
+  )
 
   // Handle message submission with reply support
   const handleSubmit = useCallback(
     (e) => {
-      e.preventDefault();
+      e.preventDefault()
 
-      const trimmedMessage = message && typeof message === "string" ? message.trim() : "";
+      const trimmedMessage = message && typeof message === "string" ? message.trim() : ""
 
       if (!trimmedMessage) {
-        toast.error("Please enter a message");
-        return;
+        toast.error("Please enter a message")
+        return
       }
 
       if (!validateMessageContent(trimmedMessage)) {
-        toast.error("Your message contains prohibited content");
-        return;
+        toast.error("Your message contains prohibited content")
+        return
       }
 
       try {
-        const currentUserInfo = getSenderInfo(userData._id);
+        const currentUserInfo = getSenderInfo(userData._id)
 
         const payload = {
           room: currentRoomId,
@@ -2032,35 +2102,35 @@ const ManualChat = () => {
               timestamp: replyingTo.originalTimestamp,
             },
           }),
-        };
+        }
 
-        socket.emit("manual_message", payload);
-        setMessage("");
-        if (replyingTo) cancelReply();
+        socket.emit("manual_message", payload)
+        setMessage("")
+        if (replyingTo) cancelReply()
       } catch (error) {
-        toast.error("Failed to send message");
+        toast.error("Failed to send message")
       }
     },
-    [message, userData, currentRoomId, socket, validateMessageContent, replyingTo, cancelReply, getSenderInfo]
-  );
+    [message, userData, currentRoomId, socket, validateMessageContent, replyingTo, cancelReply, getSenderInfo],
+  )
 
   // Filter group chats based on search term
   const filteredChats = useMemo(() => {
     return allGroupChats.filter((chat) => {
-      const groupName = chat?.groupName || "Group Chat";
-      return groupName.toLowerCase().includes(searchTerm.toLowerCase());
-    });
-  }, [allGroupChats, searchTerm]);
+      const groupName = chat?.groupName || "Group Chat"
+      return groupName.toLowerCase().includes(searchTerm.toLowerCase())
+    })
+  }, [allGroupChats, searchTerm])
 
   // Get participant names for display
   const getParticipantNames = (chat) => {
     if (userData?.role === "provider") {
-      return chat?.userId?.name || "User";
+      return chat?.userId?.name || "User"
     } else {
-      const providerNames = chat?.providerIds?.map((provider) => provider.name).join(", ") || "Providers";
-      return providerNames;
+      const providerNames = chat?.providerIds?.map((provider) => provider.name).join(", ") || "Providers"
+      return providerNames
     }
-  };
+  }
 
   // const isMobile = window.innerWidth <= 710;
   // const canvasWidth = Math.min(800, window.innerWidth - 50);
@@ -2079,7 +2149,7 @@ const ManualChat = () => {
       "#ffffff",
       "#808080",
       "#ff8000",
-    ];
+    ]
 
     return (
       <div className="compact-brush-controls">
@@ -2101,7 +2171,9 @@ const ManualChat = () => {
             </div>
           )}
           <div className="size-section">
-            <label>{isEraser ? "Eraser" : ""} Size: {brushRadius}px</label>
+            <label>
+              {isEraser ? "Eraser" : ""} Size: {brushRadius}px
+            </label>
             <input
               type="range"
               min="1"
@@ -2113,11 +2185,11 @@ const ManualChat = () => {
           </div>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   if (!userData) {
-    return <AccessDenied />;
+    return <AccessDenied />
   }
 
   if (loading) {
@@ -2143,7 +2215,7 @@ const ManualChat = () => {
         </h5>
         <small className="text-muted">Please wait while we prepare your workspace.</small>
       </div>
-    );
+    )
   }
 
   return (
@@ -2178,7 +2250,7 @@ const ManualChat = () => {
                       <div className="avatar">
                         <img
                           src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                            chat?.groupName || "Group"
+                            chat?.groupName || "Group",
                           )}&background=random`}
                           alt={chat?.groupName || "Group Chat"}
                         />
@@ -2191,9 +2263,7 @@ const ManualChat = () => {
                         <div className="participants">{getParticipantNames(chat)}</div>
                         <div className="last-message">
                           {chat?.messages?.[chat?.messages.length - 1]?.text ||
-                            (chat?.messages?.[chat?.messages.length - 1]?.file
-                              ? "File Attached"
-                              : "No messages yet")}
+                            (chat?.messages?.[chat?.messages.length - 1]?.file ? "File Attached" : "No messages yet")}
                         </div>
                       </div>
                       <div className="chat-meta">
@@ -2204,7 +2274,7 @@ const ManualChat = () => {
                               {
                                 hour: "2-digit",
                                 minute: "2-digit",
-                              }
+                              },
                             )}
                           </div>
                         )}
@@ -2241,17 +2311,14 @@ const ManualChat = () => {
                         {selectedChat && (
                           <img
                             src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              groupName || selectedChat?.groupName || "Group"
+                              groupName || selectedChat?.groupName || "Group",
                             )}&background=random`}
                             alt={groupName || selectedChat?.groupName || "Group Chat"}
                           />
                         )}
                       </div>
                       <div className="chatn-user-details">
-                        <div
-                          className="chatn-user-name"
-                          style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                        >
+                        <div className="chatn-user-name" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           {isEditingGroupName ? (
                             <>
                               <input
@@ -2259,8 +2326,8 @@ const ManualChat = () => {
                                 onChange={(e) => setGroupName(e.target.value)}
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter") {
-                                    handleUpdateGroupName(groupName);
-                                    setIsEditingGroupName(false);
+                                    handleUpdateGroupName(groupName)
+                                    setIsEditingGroupName(false)
                                   }
                                 }}
                                 autoFocus
@@ -2268,8 +2335,8 @@ const ManualChat = () => {
                               />
                               <button
                                 onClick={() => {
-                                  handleUpdateGroupName(groupName);
-                                  setIsEditingGroupName(false);
+                                  handleUpdateGroupName(groupName)
+                                  setIsEditingGroupName(false)
                                 }}
                               >
                                 ✅
@@ -2350,14 +2417,11 @@ const ManualChat = () => {
                         </div>
                       ) : (
                         messages.map((msg, idx) => {
-                          const isOwn = msg.sender === id;
-                          const senderInfo = getSenderInfo(msg.sender || msg.senderId);
+                          const isOwn = msg.sender === id
+                          const senderInfo = getSenderInfo(msg.sender || msg.senderId)
 
                           return (
-                            <div
-                              key={idx}
-                              className={`chatn-message ${isOwn ? "chatn-outgoing" : "chatn-incoming"}`}
-                            >
+                            <div key={idx} className={`chatn-message ${isOwn ? "chatn-outgoing" : "chatn-incoming"}`}>
                               {!isOwn && (
                                 <div className={`chatn-sender-name ${senderInfo.role}`}>{senderInfo.name}</div>
                               )}
@@ -2455,7 +2519,7 @@ const ManualChat = () => {
                                 </div>
                               )}
                             </div>
-                          );
+                          )
                         })
                       )}
                     </ScrollToBottom>
@@ -2470,24 +2534,24 @@ const ManualChat = () => {
                     className="image-annotation-modal"
                     ref={modalRef}
                   >
-                    <Modal.Header closeButton style={{ backgroundColor: '#EDBE3A' }} className="border-0 text-white">
-                      <div style={{ display: 'flex' }} className="w-100 align-items-center justify-content-between">
+                    <Modal.Header closeButton style={{ backgroundColor: "#EDBE3A" }} className="border-0 text-white">
+                      <div style={{ display: "flex" }} className="w-100 align-items-center justify-content-between">
                         <Modal.Title className="d-flex align-items-center gap-2 fw-bold fs-5 mb-0">
                           <MdBrush className="fs-4" />
                           {isAnnotating ? "Annotate Image" : "View Image"}
                         </Modal.Title>
 
                         <div className="d-flex align-items-center gap-2">
-                          {!isChatEnded && (
-                            !isAnnotating ? (
+                          {!isChatEnded &&
+                            (!isAnnotating ? (
                               <button
                                 onClick={() => {
-                                  setIsAnnotating(true);
+                                  setIsAnnotating(true)
                                   // Optional: Reset zoom when entering annotation mode
-                                  resetZoom();
+                                  resetZoom()
                                 }}
                                 className="btn btn-light btn-sm btn-sm align-items-center gap-1"
-                                style={{ display: 'flex' }}
+                                style={{ display: "flex" }}
                               >
                                 <MdBrush className="fs-6" />
                                 <span className="d-none d-sm-inline">Start Editing</span>
@@ -2495,22 +2559,21 @@ const ManualChat = () => {
                             ) : (
                               <button
                                 onClick={() => {
-                                  setIsAnnotating(false);
-                                  setZoomLevel(1); // Reset zoom
-                                  setPanOffset({ x: 0, y: 0 }); // Reset pan
+                                  setIsAnnotating(false)
+                                  setZoomLevel(1) // Reset zoom
+                                  setPanOffset({ x: 0, y: 0 }) // Reset pan
                                 }}
                                 className="btn btn-outline-light btn-sm align-items-center gap-1"
-                                style={{ display: 'flex' }}
+                                style={{ display: "flex" }}
                               >
                                 <span className="d-none d-sm-inline">Preview Mode</span>
                                 <span className="d-sm-none">👁️</span>
                               </button>
-                            )
-                          )}
+                            ))}
 
                           <button
                             className="btn btn-outline-light btn-sm align-items-center gap-1"
-                            style={{ display: 'flex' }}
+                            style={{ display: "flex" }}
                             onClick={handleBase64Download}
                           >
                             <MdAttachment className="fs-6" />
@@ -2521,13 +2584,17 @@ const ManualChat = () => {
                             <button
                               onClick={handleSendAnnotation}
                               className="btn btn-success btn-sm align-items-center gap-1"
-                              style={{ display: 'flex' }}
+                              style={{ display: "flex" }}
                               disabled={loading}
                             >
                               <MdSend className="fs-6" />
                               {loading ? (
                                 <>
-                                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                  <span
+                                    className="spinner-border spinner-border-sm me-1"
+                                    role="status"
+                                    aria-hidden="true"
+                                  ></span>
                                   <span className="d-none d-sm-inline">Sending...</span>
                                 </>
                               ) : (
@@ -2539,26 +2606,36 @@ const ManualChat = () => {
                       </div>
                     </Modal.Header>
 
-                    <Modal.Body className="p-0" style={{ height: '80vh', overflow: 'hidden' }}>
+                    <Modal.Body className="p-0" style={{ height: "80vh", overflow: "hidden" }}>
                       {selectedImage && (
                         <div className="h-100 d-flex flex-column flex-lg-row">
                           {/* Tools Panel - Left Sidebar on Desktop, Top on Mobile */}
                           {isAnnotating && (
-                            <div className="tools-panel text-white p-3 order-1 tool-height order-lg-0"
-                              style={{ minWidth: "300px", overflowY: 'auto' }}>
-
+                            <div
+                              className="tools-panel text-white p-3 order-1 tool-height order-lg-0"
+                              style={{ minWidth: "300px", overflowY: "auto" }}
+                            >
                               {/* Drawing Tools Section */}
                               <div className="mb-4">
-                                <h6 style={{ display: 'flex' }} className="text-black mb-3 align-items-center gap-2">
+                                <h6 style={{ display: "flex" }} className="text-black mb-3 align-items-center gap-2">
                                   <MdBrush className="text-info" /> Drawing Tools
                                 </h6>
 
                                 {/* First Row */}
-                                <div style={{ display: 'flex' }} className="gap-2 mb-2">
+                                <div style={{ display: "flex" }} className="gap-2 mb-2">
                                   <button
                                     className={`btn ${drawingTool === "brush" ? "btn-info text-dark" : "btn-outline-info"}`}
-                                    onClick={() => { setDrawingTool("brush"); if (isAddingText) setIsAddingText(false); }}
-                                    style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    onClick={() => {
+                                      setDrawingTool("brush")
+                                      if (isAddingText) setIsAddingText(false)
+                                    }}
+                                    style={{
+                                      width: "45px",
+                                      height: "45px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
                                     title="Brush Tool - Draw freehand"
                                   >
                                     <MdBrush />
@@ -2566,8 +2643,17 @@ const ManualChat = () => {
 
                                   <button
                                     className={`btn ${drawingTool === "eraser" ? "btn-info text-dark" : "btn-outline-info"}`}
-                                    onClick={() => { setDrawingTool("eraser"); if (isAddingText) setIsAddingText(false); }}
-                                    style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    onClick={() => {
+                                      setDrawingTool("eraser")
+                                      if (isAddingText) setIsAddingText(false)
+                                    }}
+                                    style={{
+                                      width: "45px",
+                                      height: "45px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
                                     title="Eraser Tool - Remove drawings"
                                   >
                                     <MdClear />
@@ -2575,8 +2661,17 @@ const ManualChat = () => {
 
                                   <button
                                     className={`btn ${drawingTool === "rectangle" ? "btn-info text-dark" : "btn-outline-info"}`}
-                                    onClick={() => { setDrawingTool("rectangle"); if (isAddingText) setIsAddingText(false); }}
-                                    style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    onClick={() => {
+                                      setDrawingTool("rectangle")
+                                      if (isAddingText) setIsAddingText(false)
+                                    }}
+                                    style={{
+                                      width: "45px",
+                                      height: "45px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
                                     title="Rectangle Tool - Draw rectangles"
                                   >
                                     <MdRectangle />
@@ -2584,8 +2679,17 @@ const ManualChat = () => {
 
                                   <button
                                     className={`btn ${drawingTool === "circle" ? "btn-info text-dark" : "btn-outline-info"}`}
-                                    onClick={() => { setDrawingTool("circle"); if (isAddingText) setIsAddingText(false); }}
-                                    style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    onClick={() => {
+                                      setDrawingTool("circle")
+                                      if (isAddingText) setIsAddingText(false)
+                                    }}
+                                    style={{
+                                      width: "45px",
+                                      height: "45px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
                                     title="Circle Tool - Draw circles"
                                   >
                                     <MdCircle />
@@ -2593,11 +2697,20 @@ const ManualChat = () => {
                                 </div>
 
                                 {/* Second Row */}
-                                <div style={{ display: 'flex' }} className="gap-2">
+                                <div style={{ display: "flex" }} className="gap-2">
                                   <button
                                     className={`btn ${drawingTool === "arrow" ? "btn-info text-dark" : "btn-outline-info"}`}
-                                    onClick={() => { setDrawingTool("arrow"); if (isAddingText) setIsAddingText(false); }}
-                                    style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    onClick={() => {
+                                      setDrawingTool("arrow")
+                                      if (isAddingText) setIsAddingText(false)
+                                    }}
+                                    style={{
+                                      width: "45px",
+                                      height: "45px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
                                     title="Arrow Tool - Draw arrows"
                                   >
                                     <MdArrowForward />
@@ -2607,14 +2720,20 @@ const ManualChat = () => {
                                     className={`btn ${drawingTool === "text" ? "btn-info text-dark" : "btn-outline-info"}`}
                                     onClick={() => {
                                       if (isAddingText) {
-                                        setIsAddingText(false);
-                                        setDrawingTool("brush");
+                                        setIsAddingText(false)
+                                        setDrawingTool("brush")
                                       } else {
-                                        setIsAddingText(true);
-                                        setDrawingTool("text");
+                                        setIsAddingText(true)
+                                        setDrawingTool("text")
                                       }
                                     }}
-                                    style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    style={{
+                                      width: "45px",
+                                      height: "45px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
                                     title="Text Tool - Add text"
                                   >
                                     <TfiText />
@@ -2622,15 +2741,23 @@ const ManualChat = () => {
 
                                   <button
                                     className={`btn ${drawingTool === "pan" ? "btn-info text-dark" : "btn-outline-info"}`}
-                                    onClick={() => { setDrawingTool("pan"); if (isAddingText) setIsAddingText(false); }}
-                                    style={{ width: "45px", height: "45px", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    onClick={() => {
+                                      setDrawingTool("pan")
+                                      if (isAddingText) setIsAddingText(false)
+                                    }}
+                                    style={{
+                                      width: "45px",
+                                      height: "45px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
                                     title="Pan Tool - Drag to move"
                                   >
                                     <Hand />
                                   </button>
                                 </div>
                               </div>
-
 
                               {/* Brush Settings */}
                               <div className="mb-4">
@@ -2648,7 +2775,7 @@ const ManualChat = () => {
                                           value={brushColor}
                                           onChange={(e) => setBrushColor(e.target.value)}
                                           className="form-control border form-control-color"
-                                          style={{ width: '50px', height: '40px' }}
+                                          style={{ width: "50px", height: "40px" }}
                                         />
                                       </div>
                                     </div>
@@ -2691,12 +2818,14 @@ const ManualChat = () => {
                                           setTextSettings((prev) => ({ ...prev, color: e.target.value }))
                                         }
                                         className="form-control border form-control-color w-100"
-                                        style={{ height: '40px' }}
+                                        style={{ height: "40px" }}
                                       />
                                     </div>
 
                                     <div className="mb-3">
-                                      <label className="form-label text-black small">Font Size: {textSettings.fontSize}px</label>
+                                      <label className="form-label text-black small">
+                                        Font Size: {textSettings.fontSize}px
+                                      </label>
                                       <input
                                         type="range"
                                         min="12"
@@ -2794,12 +2923,20 @@ const ManualChat = () => {
                                 <div
                                   className="canvas-container position-relative"
                                   style={{
-                                    position: 'absolute',
+                                    position: "absolute",
                                     left: `${panOffset.x}px`,
                                     top: `${panOffset.y}px`,
                                     width: `${originalWidth * zoomLevel}px`,
                                     height: `${originalHeight * zoomLevel}px`,
-                                    cursor: isPanning ? "grabbing" : (drawingTool === "pan" ? "grab" : (isAddingText ? "crosshair" : (drawingTool === "eraser" ? getEraserCursor() : "default"))),
+                                    cursor: isPanning
+                                      ? "grabbing"
+                                      : drawingTool === "pan"
+                                        ? "grab"
+                                        : isAddingText
+                                          ? "crosshair"
+                                          : drawingTool === "eraser"
+                                            ? getEraserCursor()
+                                            : "default",
                                   }}
                                 >
                                   <>
@@ -2824,8 +2961,11 @@ const ManualChat = () => {
                                       height={originalHeight * zoomLevel}
                                       className="position-absolute top-0 start-0 shadow rounded"
                                       style={{
-                                        pointerEvents: ["rectangle", "circle", "arrow", "line", "eraser"].includes(drawingTool)
-                                          ? "auto" : "none",
+                                        pointerEvents: ["rectangle", "circle", "arrow", "line", "eraser"].includes(
+                                          drawingTool,
+                                        )
+                                          ? "auto"
+                                          : "none",
                                         zIndex: 5,
                                         cursor: drawingTool === "eraser" ? getEraserCursor() : "default",
                                       }}
@@ -2852,7 +2992,7 @@ const ManualChat = () => {
                                     {textElements.map((element) => (
                                       <div
                                         key={element.id}
-                                        className={`text-element position-absolute user-select-none ${selectedTextId === element.id ? 'selected' : ''}`}
+                                        className={`text-element position-absolute user-select-none ${selectedTextId === element.id ? "selected" : ""}`}
                                         style={{
                                           left: element.x * zoomLevel,
                                           top: element.y * zoomLevel,
@@ -2868,15 +3008,17 @@ const ManualChat = () => {
                                           zIndex: element.zIndex + 10,
                                           transform: `rotate(${element.rotation || 0}deg)`,
                                           textAlign: element.textAlign,
-                                          border: selectedTextId === element.id
-                                            ? "2px dashed #0d6efd"
-                                            : "1px solid transparent",
+                                          border:
+                                            selectedTextId === element.id
+                                              ? "2px dashed #0d6efd"
+                                              : "1px solid transparent",
                                           borderRadius: "6px",
                                           minWidth: "20px",
                                           minHeight: `${element.fontSize * zoomLevel}px`,
-                                          boxShadow: selectedTextId === element.id
-                                            ? "0 0 0 0.25rem rgba(13, 110, 253, 0.25)"
-                                            : "0 0.25rem 0.5rem rgba(0,0,0,0.1)",
+                                          boxShadow:
+                                            selectedTextId === element.id
+                                              ? "0 0 0 0.25rem rgba(13, 110, 253, 0.25)"
+                                              : "0 0.25rem 0.5rem rgba(0,0,0,0.1)",
                                           transition: "all 0.2s ease-in-out",
                                           whiteSpace: "nowrap",
                                           overflow: "visible",
@@ -2884,20 +3026,22 @@ const ManualChat = () => {
                                         onMouseDown={(e) => handleTextMouseDown(e, element.id)}
                                         onDoubleClick={() => handleTextDoubleClick(element.id)}
                                         onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedTextId(element.id);
+                                          e.stopPropagation()
+                                          setSelectedTextId(element.id)
                                         }}
                                       >
                                         {element.text}
                                         {selectedTextId === element.id && (
                                           <div className="position-absolute top-0 end-0">
-                                            <div className="btn-group-vertical btn-group-sm shadow"
-                                              style={{ transform: 'translate(50%, -50%)' }}>
+                                            <div
+                                              className="btn-group-vertical btn-group-sm shadow"
+                                              style={{ transform: "translate(50%, -50%)" }}
+                                            >
                                               <button
                                                 className="btn btn-primary btn-sm"
                                                 onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleTextDoubleClick(element.id);
+                                                  e.stopPropagation()
+                                                  handleTextDoubleClick(element.id)
                                                 }}
                                                 title="Edit text"
                                               >
@@ -2906,8 +3050,8 @@ const ManualChat = () => {
                                               <button
                                                 className="btn btn-danger btn-sm"
                                                 onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  deleteTextElement(element.id);
+                                                  e.stopPropagation()
+                                                  deleteTextElement(element.id)
                                                 }}
                                                 title="Delete text"
                                               >
@@ -2937,19 +3081,19 @@ const ManualChat = () => {
                                             onChange={(e) => setTextInput(e.target.value)}
                                             onKeyDown={(e) => {
                                               if (e.key === "Enter" && textInput.trim()) {
-                                                addTextElement(textPosition.x, textPosition.y, textInput);
+                                                addTextElement(textPosition.x, textPosition.y, textInput)
                                               } else if (e.key === "Escape") {
-                                                setTextInput("");
-                                                setTextPosition(null);
-                                                setIsAddingText(false);
+                                                setTextInput("")
+                                                setTextPosition(null)
+                                                setIsAddingText(false)
                                               }
                                             }}
                                             onBlur={() => {
                                               if (textInput.trim()) {
-                                                addTextElement(textPosition.x, textPosition.y, textInput);
+                                                addTextElement(textPosition.x, textPosition.y, textInput)
                                               } else {
-                                                setTextPosition(null);
-                                                setIsAddingText(false);
+                                                setTextPosition(null)
+                                                setIsAddingText(false)
                                               }
                                             }}
                                             onClick={(e) => e.stopPropagation()}
@@ -2962,13 +3106,11 @@ const ManualChat = () => {
                                               color: textSettings.color,
                                               backgroundColor: textSettings.backgroundColor,
                                               minWidth: "250px",
-                                              borderWidth: '2px'
+                                              borderWidth: "2px",
                                             }}
                                             placeholder="Type your text and press Enter..."
                                           />
-                                          <span className="input-group-text bg-primary text-white">
-                                            ⌨️
-                                          </span>
+                                          <span className="input-group-text bg-primary text-white">⌨️</span>
                                         </div>
                                       </div>
                                     )}
@@ -2995,14 +3137,11 @@ const ManualChat = () => {
                                   Tool: <span className="text-info fw-bold">{drawingTool}</span>
                                   {drawingTool !== "eraser" && (
                                     <>
-                                      | Color: <span style={{ color: brushColor }}>●</span>
-                                      | Size: {brushRadius}px
+                                      | Color: <span style={{ color: brushColor }}>●</span>| Size: {brushRadius}px
                                     </>
                                   )}
-                                  {drawingTool === "eraser" && (
-                                    <> | Size: {eraserRadius}px</>
-                                  )}
-                                  | Zoom: {Math.round(zoomLevel * 100)}%
+                                  {drawingTool === "eraser" && <> | Size: {eraserRadius}px</>}| Zoom:{" "}
+                                  {Math.round(zoomLevel * 100)}%
                                 </div>
                               </div>
                             )}
@@ -3034,9 +3173,9 @@ const ManualChat = () => {
                                     onChange={(e) => setEditingTextValue(e.target.value)}
                                     onKeyDown={(e) => {
                                       if (e.key === "Enter" && editingTextValue.trim()) {
-                                        saveTextEdit();
+                                        saveTextEdit()
                                       } else if (e.key === "Escape") {
-                                        cancelTextEdit();
+                                        cancelTextEdit()
                                       }
                                     }}
                                     className="form-control form-control-lg border-primary"
@@ -3155,8 +3294,7 @@ const ManualChat = () => {
                         cancelReply={cancelReply}
                         getSenderInfo={getSenderInfo}
                       />
-                    )
-                    }
+                    )}
                     <input
                       type="file"
                       id="chatnFileUpload"
