@@ -102,7 +102,7 @@ const Contact = () => {
                             {/* Contact Information */}
                             <div className="col-lg-5">
                                 <div className="h-100">
-                                    <h3 className="fw-bold mb-4 text-primary">
+                                    <h3 className="fw-bold mb-4 " style={{color:"#042F66"}}>
                                         <i className="fas fa-map-marker-alt me-2"></i>
                                         Get in Touch
                                     </h3>
@@ -113,10 +113,10 @@ const Contact = () => {
                                             <div className="card border-0 shadow-sm h-100 hover-card">
                                                 <div className="card-body d-flex align-items-start">
                                                     <div className="bg-primary bg-opacity-10 rounded-circle p-3 me-3 flex-shrink-0">
-                                                        <i className="fas fa-map-marker-alt text-primary fa-lg"></i>
+                                                        <i className="fas fa-map-marker-alt fa-lg" style={{color:"#042F66"}}></i>
                                                     </div>
                                                     <div>
-                                                        <h6 className="card-title fw-bold mb-2">Visit Our Office</h6>
+                                                        <h6 className="card-title fw-bold mb-2" style={{color:"#042F66"}}>Visit Our Office</h6>
                                                         <p className="card-text text-muted mb-0">
                                                             E-520A, 3rd Floor, Sector 7<br />
                                                             Dwarka, New Delhi - 110075
@@ -130,12 +130,12 @@ const Contact = () => {
                                             <div className="card border-0 shadow-sm h-100 hover-card">
                                                 <div className="card-body d-flex align-items-start">
                                                     <div className="bg-success bg-opacity-10 rounded-circle p-3 me-3 flex-shrink-0">
-                                                        <i className="fas fa-envelope text-success fa-lg"></i>
+                                                        <i className="fas fa-envelope fa-lg" style={{color:"#042F66"}}></i>
                                                     </div>
                                                     <div>
                                                         <h6 className="card-title fw-bold mb-2">Email Us</h6>
                                                         <p className="card-text mb-0">
-                                                            <a href="mailto:info@dessobuild.com" className="text-decoration-none">
+                                                            <a href="mailto:info@dessobuild.com" className="text-decoration-none" style={{color:"#6c757d "}}>
                                                                 info@dessobuild.com
                                                             </a>
                                                         </p>
@@ -167,7 +167,7 @@ const Contact = () => {
                                 <div className="card border-0 shadow-lg">
                                     <div className="card-body p-4 p-md-5">
                                         <div className="text-center mb-4">
-                                            <h3 className="fw-bold text-primary mb-2">Send us a Message</h3>
+                                            <h3 className="fw-bold  mb-2"  style={{color:"#042F66"}}>Send us a Message</h3>
                                             <p className="text-muted">Fill out the form below and we'll get back to you as soon as possible!</p>
                                         </div>
 
