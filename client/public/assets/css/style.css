@@ -217,11 +217,7 @@ a:visited {
   color: var(--white-color);
 }
 
-<<<<<<< HEAD
-.as_btn,
-=======
 /* .as_btn,
->>>>>>> ff81937 (new)
 .as_btn:focus,
 .as_btn:visited {
   height: 45px;
@@ -249,15 +245,9 @@ a:visited {
   background-image: -webkit-linear-gradient(0deg, rgb(244, 170, 54) 0%, rgb(232 188 55) 100%);
   background-image: -webkit-linear-gradient(0deg, rgb(244, 170, 54) 0%, rgb(232 188 55) 100%);
   background-image: -webkit-linear-gradient(0deg, rgb(244, 170, 54) 0%, rgb(232 188 55) 100%);
-<<<<<<< HEAD
-}
-
-.as_btn:after {
-=======
 } */
 
 /* .as_btn:after {
->>>>>>> ff81937 (new)
   position: absolute;
   z-index: -1;
   content: "";
@@ -268,10 +258,6 @@ a:visited {
   background-image: -webkit-linear-gradient(0deg, rgb(244, 170, 54) 0%, rgb(232 188 55) 100%);
   background-image: -webkit-linear-gradient(0deg, rgb(244, 170, 54) 0%, rgb(232 188 55) 100%);
   background-image: -webkit-linear-gradient(0deg, rgb(244, 170, 54) 0%, rgb(232 188 55) 100%);
-<<<<<<< HEAD
-}
-
-=======
 } */
 /* Primary Button Styles */
 .btn-primary,
@@ -310,7 +296,6 @@ a:visited {
   box-shadow: 0 6px 15px rgba(4, 47, 102, 0.35);
   transform: translateY(-2px);
 }
->>>>>>> ff81937 (new)
 .as_btn:hover:after {
   left: 0;
 }
@@ -623,20 +608,12 @@ a:visited {
   }
 
   .as_breadcrum_wrapper {
-<<<<<<< HEAD
-    background-image: url(../images/bg10.jpg);
-    background-position: center;
-    background-size: cover;
-    background-repeat: no-repeat;
-    padding: 28px 0 140px !important;
-=======
     background-image: url(../images/bg10.2.jpg);
     background-position: center;
     background-size: cover;
     background-repeat: no-repeat;
     padding: 86px 0 144px 0;
     /* padding: 28px 0 140px !important; */
->>>>>>> ff81937 (new)
     position: relative;
     z-index: 1;
     color: #ffffff;
@@ -1870,15 +1847,12 @@ a:visited {
 .as_blog_detail {
   padding: 0 20px 20px;
 }
-<<<<<<< HEAD
-=======
 .as_blog_detail a{
   color: var(--dark-color1) !important;
 }
 .as_blog_detail h4{
   color: var(--dark-color1);
 }
->>>>>>> ff81937 (new)
 
 .as_blog_box ul {}
 
@@ -2362,21 +2336,12 @@ section.as_pricing_plan .row {
 
 /* footer css end */
 /* breadcrum start */
-<<<<<<< HEAD
-.as_breadcrum_wrapper {
-  background-image: url(../images/bg10.jpg);
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
-  padding: 223px 0 140px;
-=======
 /* .as_breadcrum_wrapper {
   background-image: url(../images/bg10.jpg);
   background-position: top;
   background-size: cover;
   background-repeat: no-repeat;
   padding: 100px 0 140px 0;
->>>>>>> ff81937 (new)
   position: relative;
   z-index: 1;
   color: #ffffff;
@@ -2429,11 +2394,6 @@ section.as_pricing_plan .row {
 
 .breadcrumb>li+li:before {
   content: "";
-<<<<<<< HEAD
-  /* background-image: url("../images/star.png"); */
-=======
-
->>>>>>> ff81937 (new)
   background-repeat: no-repeat;
   width: 22px;
   height: 20px;
@@ -2448,10 +2408,6 @@ section.as_pricing_plan .row {
 
 .form-group {
   margin: 10px 0px 10px;
-<<<<<<< HEAD
-}
-
-=======
 } */
 
 
@@ -2698,7 +2654,6 @@ section.as_pricing_plan .row {
 align-items: center;
 justify-content: center;
 }
->>>>>>> ff81937 (new)
 /* breadcrum end */
 /* pricing plan start */
 .as_pricing_plan {
@@ -5332,9 +5287,6 @@ form.d_block {
   .as_customer_box{
     padding: 30px 30px;
   }
-<<<<<<< HEAD
-}
-=======
 }
 /* new css  */
 .footer-contact-icon {
@@ -5362,4 +5314,3 @@ form.d_block {
   background-color: #1057b4 !important;
  }
 /* new css  */
->>>>>>> ff81937 (new)
