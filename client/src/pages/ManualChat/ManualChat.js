@@ -22,6 +22,7 @@ import {
   MdZoomOut,
   MdCenterFocusWeak,
 } from "react-icons/md"
+import { IoMdArrowRoundBack } from "react-icons/io";
 import { TfiText } from "react-icons/tfi"
 import ScrollToBottom from "react-scroll-to-bottom"
 import axios from "axios"
@@ -57,6 +58,7 @@ const useAdjustedMousePosition = (containerRef, zoomLevel, panOffset) => {
 
 const ManualChat = () => {
   // Existing state management
+  // const navigate = useNavigate();
   const [showModal, setShowModal] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
   const [isFetchingChatStatus, setIsFetchingChatStatus] = useState(false)
@@ -2192,11 +2194,37 @@ const ManualChat = () => {
     return <AccessDenied />
   }
 
+  // if (loading) {
+  //   return (
+  //     <div
+  //       className="flex-column justify-content-center align-items-center bg-light"
+  //       style={{ height: "80vh", textAlign: "center", display:'flex' }}
+  //     >
+  //       <div
+  //         className="spinner-border"
+  //         role="status"
+  //         style={{
+  //           width: "3rem",
+  //           height: "3rem",
+  //           borderColor: "#eab936",
+  //           borderRightColor: "transparent",
+  //         }}
+  //       >
+  //         <span className="visually-hidden">Loading...</span>
+  //       </div>
+  //       <h5 className="fw-semibold mb-1 mt-4" style={{ color: "#eab936" }}>
+  //         Fetching Live Projects...
+  //       </h5>
+  //       <small className="text-muted">Please wait while we prepare your workspace.</small>
+  //     </div>
+  //   )
+  // }
+
   if (loading) {
     return (
       <div
-        className="d-flex flex-column justify-content-center align-items-center bg-light"
-        style={{ height: "100dvh", textAlign: "center" }}
+        className="col-md-4 chat-list-container flex-column justify-content-center align-items-center bg-light"
+        style={{ height: "80vh", textAlign: "center", display:'flex' }}
       >
         <div
           className="spinner-border"
@@ -2226,7 +2254,10 @@ const ManualChat = () => {
           {(!isMobileView || showChatList) && (
             <div className="col-md-4 chat-list-container">
               <div className="chat-list-header">
+                <div style={{display:'flex',alignItems:'center',justifyContent:'flex-start',gap:'10px'}}>
+                  <IoMdArrowRoundBack style={{marginBottom:'1rem', fontSize:'24px'}} onClick={() => navigate(-1)} />
                 <h3>Group Chats</h3>
+                </div>
                 <div className="search-container">
                   <input
                     type="search"

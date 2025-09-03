@@ -494,13 +494,17 @@
 
     .chat-list-container,
     .chat-window-container {
-        height: 100vh;
+        height: 11vh;
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
-        z-index: 10;
-        margin-top: 65px;
+        z-index: 99999999;
+        /* margin-top: 65px; */
+    }
+
+    .hub-header--fixed .hub-header__navbar {
+        padding: 0.30rem 0;
     }
 
     .chat-list-item {
@@ -508,7 +512,7 @@
     }
 
     .avatar {
-        width: 2.5rem;
+        width: 3.5rem;
         height: 2.5rem;
     }
 

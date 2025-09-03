@@ -186,7 +186,7 @@ function Register() {
                                                             <div data-mdb-input-init=""
                                                                 className="form-outline flex-fill mb-0" >
                                                                 <label className="form-label text-white" htmlFor="form3Example4cd">
-                                                                    Confirm password
+                                                                    Re-enter password
                                                                 </label>
                                                                 <input
                                                                     onChange={handleChange}

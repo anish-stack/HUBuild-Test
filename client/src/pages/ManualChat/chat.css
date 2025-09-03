@@ -417,7 +417,7 @@
 
   .chat-list-container,
   .chat-window-container {
-    height: 100vh;
+    height: 100vh !important;
   }
 
   .message-bubble {
